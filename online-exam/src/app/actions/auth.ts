@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 
 export async function signIn(formData: any) {
   try {
@@ -46,12 +47,19 @@ export async function signUp(formData: any) {
     const classId = formData.classId || null;
     const studentId = formData.studentId || null;
 
+    // Get origin dynamically from headers
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const origin = `${protocol}://${host}`;
+
     const supabase = await createClient();
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: `${origin}/login`,
         data: {
           name,
           role,
