@@ -166,6 +166,12 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
+# Self-healing: if .venv exists but streamlit was never installed, clean it up
+if [ -d ".venv" ] && [ ! -f ".venv/bin/streamlit" ]; then
+    echo "[HỆ THỐNG] Phát hiện môi trường ảo cũ bị lỗi hoặc chưa hoàn tất. Đang dọn dẹp..."
+    rm -rf .venv
+fi
+
 # Create virtual environment if missing
 if [ ! -d ".venv" ]; then
     echo "[1/3] Đang khởi tạo môi trường ảo Python (.venv) trong thư mục..."
@@ -179,11 +185,11 @@ source .venv/bin/activate
 
 # Upgrade pip and package utilities to avoid compiling from source
 echo "[2/3] Đang nâng cấp công cụ cài đặt thư viện (pip, setuptools)..."
-pip install --upgrade pip setuptools wheel
+python3 -m pip install --upgrade pip setuptools wheel
 
-# Install requirements
-echo "Đang tải và cập nhật các thư viện phụ thuộc..."
-pip install -r requirements.txt
+# Install requirements using pre-compiled binaries only
+echo "Đang tải và cập nhật các thư viện phụ thuộc (chỉ sử dụng bản đóng gói sẵn)..."
+python3 -m pip install -r requirements.txt --only-binary=:all:
 
 # Run Streamlit
 echo "[3/3] Đang kết nối AI & Khởi chạy máy chủ..."
