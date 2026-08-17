@@ -44,3 +44,6 @@ coverage.xml
 
 # Vercel
 .vercel
+
+# macOS App Bundles
+*.app
