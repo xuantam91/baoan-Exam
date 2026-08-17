@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import ThemePicker from '@/components/ThemePicker';
 import Logo from '@/components/Logo';
+import LanguagePicker from '@/components/LanguagePicker';
+import { translations, Language } from '@/lib/translations';
 import { getCurrentUser } from '@/app/actions/auth';
 import {
+  LogIn,
   BookOpen,
   GraduationCap,
   ClipboardList,
@@ -140,6 +143,15 @@ function Section({
 /* ── Main Page ──────────────────────────────────────────── */
 export default function Home() {
   const router = useRouter();
+  const [lang, setLang] = useState<Language>('vi');
+
+  useEffect(() => {
+    const saved = (localStorage.getItem('lang') as Language) || 'vi';
+    setLang(saved);
+  }, []);
+
+  const t = translations[lang] || translations.vi;
+
   const [examId, setExamId] = useState('');
   const [error, setError] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -223,29 +235,32 @@ export default function Home() {
             </div>
             <div>
               <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">BaoAn Exam</span>
-              <p className="text-[10px] font-bold -mt-0.5 tracking-wider uppercase text-indigo-600 dark:text-indigo-400">AI-Powered Education</p>
+              <p className="text-[10px] font-bold -mt-0.5 tracking-wider uppercase text-indigo-600 dark:text-indigo-400 hidden sm:block">AI-Powered Education</p>
             </div>
           </div>
 
           {/* Nav links (desktop) */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            <a href="#features" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Tính năng</a>
-            <a href="#how-it-works" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Quy trình</a>
-            <a href="#about-me" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Về Giáo Viên</a>
-            <a href="#stats" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Thống kê</a>
-            <a href="#start" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Bắt đầu</a>
+          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <a href="#features" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t.navFeatures}</a>
+            <a href="#how-it-works" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t.navProcess}</a>
+            <a href="#about-me" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t.navTeacher}</a>
+            <a href="#stats" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t.navStats}</a>
+            <a href="#start" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t.navStart}</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {profile ? (
-              <a href={getDashboardUrl()} className="sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold transition-all shadow-md shadow-emerald-500/20 cursor-pointer">
-                <Users className="w-4 h-4" /> Bảng Làm Việc ({profile.name})
+              <a href={getDashboardUrl()} className="inline-flex items-center justify-center p-2.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 cursor-pointer active:scale-95 transition-transform" title={`${t.dashboard} (${profile.name})`}>
+                <Users className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline ml-1.5 text-sm font-bold whitespace-nowrap">{t.dashboard}</span>
               </a>
             ) : (
-              <a href="/login" className="sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold transition-all shadow-md shadow-indigo-500/20 cursor-pointer">
-                Đăng Nhập
+              <a href="/login" className="inline-flex items-center justify-center p-2.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-500/20 cursor-pointer active:scale-95 transition-transform" title={t.login}>
+                <LogIn className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline ml-1.5 text-sm font-bold whitespace-nowrap">{t.login}</span>
               </a>
             )}
+            <LanguagePicker align="down" />
             <ThemePicker align="down" />
             <ThemeToggle />
           </div>
@@ -266,12 +281,12 @@ export default function Home() {
           <div className="text-center max-w-4xl mx-auto">
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold mb-6 border" style={{ backgroundColor: 'hsl(var(--accent))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--accent-foreground))' }}>
-              <Sparkles className="w-3.5 h-3.5" /> Nền tảng giáo dục số thế hệ mới — Powered by AI
+              <Sparkles className="w-3.5 h-3.5" /> {t.heroBadge}
             </div>
 
             {/* Title */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-2 leading-tight" style={{ color: 'hsl(var(--foreground))' }}>
-              Số Hóa Giáo Dục
+              {t.heroTitle1}
             </h1>
 
             {/* Typing line */}
@@ -281,19 +296,17 @@ export default function Home() {
             </div>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              Ứng dụng <strong className="text-indigo-600 dark:text-indigo-400">trí tuệ nhân tạo (AI)</strong> vào toàn bộ quy trình giáo dục:
-              từ tạo ngân hàng câu hỏi, <strong>sinh đề thi ngẫu nhiên</strong>, tổ chức thi trực tuyến,
-              đến <strong>chấm điểm tự động</strong> và phân tích kết quả — tất cả trên một nền tảng duy nhất.
+            <p className="text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10 text-slate-500 dark:text-slate-400">
+              {t.heroDesc}
             </p>
 
             {/* CTA buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a href="#start" className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-500/20 cursor-pointer active:scale-[0.98]">
-                🚀 Bắt Đầu Ngay <ArrowRight className="w-4 h-4" />
+              <a href="#start" className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 cursor-pointer active:scale-95">
+                🚀 {t.btnStart} <ArrowRight className="w-4 h-4" />
               </a>
-              <a href="#features" className="flex items-center gap-2 px-8 py-3.5 rounded-xl border font-bold text-sm transition-all cursor-pointer hover:shadow-md active:scale-[0.98]" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))', backgroundColor: 'hsl(var(--card))' }}>
-                Tìm Hiểu Thêm <ChevronDown className="w-4 h-4" />
+              <a href="#features" className="flex items-center gap-2 px-8 py-3.5 rounded-xl border font-bold text-sm transition-all cursor-pointer hover:shadow-md active:scale-95" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))', backgroundColor: 'hsl(var(--card))' }}>
+                {t.btnLearnMore} <ChevronDown className="w-4 h-4" />
               </a>
             </div>
           </div>
@@ -308,10 +321,10 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               {[
-                { value: 90, suffix: '%', label: 'Thời gian tiết kiệm', icon: Clock, color: 'text-indigo-500' },
-                { value: 100, suffix: '%', label: 'Tự động hóa', icon: Cpu, color: 'text-violet-500' },
-                { value: 5, suffix: '+', label: 'Dạng câu hỏi', icon: Layers, color: 'text-emerald-500' },
-                { value: 24, suffix: '/7', label: 'Thi mọi lúc', icon: Globe, color: 'text-amber-500' },
+                { value: 90, suffix: '%', label: t.stat1Label, icon: Clock, color: 'text-indigo-500' },
+                { value: 100, suffix: '%', label: t.stat2Label, icon: Cpu, color: 'text-violet-500' },
+                { value: 5, suffix: '+', label: lang === 'vi' ? 'Dạng câu hỏi' : lang === 'en' ? 'Question Types' : lang === 'la' ? 'ປະເພດຄຳຖາມ' : '试题类型', icon: Layers, color: 'text-emerald-500' },
+                { value: 24, suffix: '/7', label: lang === 'vi' ? 'Thi mọi lúc' : lang === 'en' ? 'Test Anytime' : lang === 'la' ? 'ສອບເສັງທຸກເວລາ' : '随时考', icon: Globe, color: 'text-amber-500' },
               ].map((s) => (
                 <div key={s.label}>
                   <s.icon className={`w-6 h-6 mx-auto mb-2 ${s.color}`} />
@@ -333,24 +346,24 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 border ${pastel.indigo}`}>
-              <Sparkles className="w-3 h-3" /> Tính Năng Nổi Bật
+              <Sparkles className="w-3 h-3" /> {t.featBadge}
             </div>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-              Mọi thứ bạn cần, trong một nền tảng
+              {t.featTitle}
             </h2>
             <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              Tích hợp AI vào từng bước — từ soạn đề đến phân tích kết quả, giáo viên không cần thao tác thủ công.
+              {t.featDesc}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: Brain,           title: 'AI Chấm Điểm Tự Động',      desc: 'Trắc nghiệm chấm ngay khi nộp bài. Tự luận được AI phân tích nội dung và cho điểm gợi ý — giáo viên chỉ cần duyệt.', p: pastel.indigo },
-              { icon: FileSpreadsheet, title: 'Sinh Đề Ngẫu Nhiên',         desc: 'Mỗi học sinh nhận một đề thi riêng biệt, random theo độ khó, chương, bài — đảm bảo công bằng tuyệt đối.', p: pastel.violet },
-              { icon: BarChart3,       title: 'Dashboard Phân Tích',         desc: 'Thống kê realtime: điểm TB, tỷ lệ đúng sai từng câu, xếp hạng lớp, so sánh giữa các lần thi.', p: pastel.emerald },
-              { icon: Bot,             title: 'Nhập Đề Bằng AI',            desc: 'Upload file Word/PDF — Gemini AI tự trích xuất câu hỏi, đáp án, phân loại độ khó và nhập vào ngân hàng.', p: pastel.amber },
-              { icon: Shield,          title: 'Bảo Mật & Chống Gian Lận',   desc: 'Mỗi bài thi có mã UUID duy nhất, giới hạn số lần làm, hạn nộp bài — đảm bảo tính nghiêm túc.', p: pastel.rose },
-              { icon: Printer,         title: 'In Đề & Phiếu Trả Lời',     desc: 'Xuất đề thi, phiếu trả lời, đáp án ra PDF đẹp mắt — sẵn sàng cho các kỳ thi offline.', p: pastel.sky },
+              { icon: Brain,           title: t.feat1Title, desc: t.feat1Desc, p: pastel.indigo },
+              { icon: FileSpreadsheet, title: t.feat2Title, desc: t.feat2Desc, p: pastel.violet },
+              { icon: BarChart3,       title: t.feat3Title, desc: t.feat3Desc, p: pastel.emerald },
+              { icon: Bot,             title: t.feat4Title, desc: t.feat4Desc, p: pastel.amber },
+              { icon: Shield,          title: t.feat5Title, desc: t.feat5Desc, p: pastel.rose },
+              { icon: Printer,         title: t.feat6Title, desc: t.feat6Desc, p: pastel.sky },
             ].map((f) => (
               <div
                 key={f.title}
@@ -388,10 +401,10 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-6">
                     <p className="text-xs font-black text-emerald-400 uppercase tracking-widest mb-1">
-                      Khoa Học Tự Nhiên & STEM
+                      {lang === 'vi' ? 'Khoa Học Tự Nhiên & STEM' : lang === 'en' ? 'Natural Science & STEM' : lang === 'la' ? 'ວິທະຍາສາດທຳມະຊາດ & STEM' : '自然科学与 STEM'}
                     </p>
                     <p className="text-white text-sm font-bold italic drop-shadow-md">
-                      "Truyền cảm hứng · Tạo giá trị · Lan tỏa yêu thương ♡"
+                      {lang === 'vi' ? '"Truyền cảm hứng · Tạo giá trị · Lan tỏa yêu thương ♡"' : lang === 'en' ? '"Inspiring · Value Creating · Love Spreading ♡"' : lang === 'la' ? '"ສ້າງແຮງບັນດານໃຈ · ສ້າງຄຸນຄ່າ · ເຜີຍແຜ່ຄວາມຮັກ ♡"' : '"启迪智慧 · 创造价值 · 传递爱心 ♡"'}
                     </p>
                   </div>
                 </div>
@@ -402,20 +415,20 @@ export default function Home() {
             <div className="lg:col-span-7 space-y-6">
               <div>
                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 border ${pastel.indigo}`}>
-                  <Atom className="w-3.5 h-3.5" /> Giáo Viên Chuyên Môn
+                  <Atom className="w-3.5 h-3.5" /> {t.aboutBadge}
                 </div>
                 <h2 className="text-3xl font-black tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-                  Khoa Học Tự Nhiên & Giáo Dục STEM
+                  {t.aboutTitle}
                 </h2>
                 <p className="text-base font-bold text-indigo-600 dark:text-indigo-400">
-                  Dạy học số hóa tích hợp liên môn: Sinh học - Vật lý - Hóa học
+                  {t.aboutSub}
                 </p>
               </div>
 
               {/* Quotes */}
               <div className="p-4 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900 bg-indigo-50/20 dark:bg-indigo-950/10 space-y-2">
                 <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                  Thiết kế học liệu trực quan, ứng dụng các thí nghiệm thực tế lớp 7 (chương Tế bào, Năng lượng, trao đổi chất) và các dự án STEM kích thích sáng tạo, giúp học sinh phát triển năng lực tự chủ và giải quyết vấn đề.
+                  {t.aboutQuote}
                 </p>
               </div>
 
@@ -425,13 +438,13 @@ export default function Home() {
                 {/* STEM & Science Teaching */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-black flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                    <FlaskConical className="w-4 h-4" /> Giảng Dạy & STEM
+                    <FlaskConical className="w-4 h-4" /> {t.aboutCol1Title}
                   </h4>
                   <ul className="space-y-2">
                     {[
-                      { title: 'Khoa Học Tự Nhiên 7', desc: 'Chủ đề sinh động về Tế bào, Năng lượng sinh học' },
-                      { title: 'Tích Hợp Liên Môn Lý - Hóa - Sinh', desc: 'Phương pháp kết nối các định luật tự nhiên trực quan' },
-                      { title: 'Dự án STEM sáng tạo', desc: 'Thiết kế mô hình học tập, kết nối tri thức với thực tiễn' },
+                      { title: t.aboutCol1_1, desc: t.aboutCol1_1Desc },
+                      { title: t.aboutCol1_2, desc: t.aboutCol1_2Desc },
+                      { title: t.aboutCol1_3, desc: t.aboutCol1_3Desc },
                     ].map((item) => (
                       <li key={item.title} className="text-sm flex items-start gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
@@ -447,13 +460,13 @@ export default function Home() {
                 {/* Supplementary Health & Lifestyle */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-black flex items-center gap-1.5 text-rose-500 dark:text-rose-400">
-                    <Heart className="w-4 h-4" /> Lối Sống & Sức Khỏe (Bổ sung)
+                    <Heart className="w-4 h-4" /> {t.aboutCol2Title}
                   </h4>
                   <ul className="space-y-2">
                     {[
-                      { title: 'Mục tiêu chạy bộ 10km - 15km', desc: 'Rèn luyện sức bền dẻo dai cho cả thể chất lẫn tinh thần' },
-                      { title: 'Triết lý sống mỗi ngày', desc: '"Sức khỏe là nền tảng, Kiến thức là sức mạnh" (Tốt hơn 1%)' },
-                      { title: 'Dinh dưỡng tự nhiên', desc: 'Sử dụng Chanh đào ủ muối, Dầu lạc, Matcha 100% Pure, Nghệ' },
+                      { title: t.aboutCol2_1, desc: t.aboutCol2_1Desc },
+                      { title: t.aboutCol2_2, desc: t.aboutCol2_2Desc },
+                      { title: t.aboutCol2_3, desc: t.aboutCol2_3Desc },
                     ].map((item) => (
                       <li key={item.title} className="text-sm flex items-start gap-2">
                         <Heart className="w-3.5 h-3.5 text-rose-500 mt-0.5 flex-shrink-0" />
@@ -471,13 +484,13 @@ export default function Home() {
               {/* Goal Badges */}
               <div className="flex flex-wrap gap-2 pt-2">
                 <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/20">
-                  Khoa Học Tự Nhiên
+                  {t.badgeKHTN}
                 </span>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/20">
-                  Dự Án STEM
+                  {t.badgeSTEM}
                 </span>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/20">
-                  Số Hóa Học Liệu
+                  {t.badgeDigit}
                 </span>
               </div>
             </div>
@@ -494,29 +507,31 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" style={{ borderColor: 'hsl(var(--border))' }}>
             <div className="text-center max-w-2xl mx-auto mb-14">
               <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 border ${pastel.violet}`}>
-                <Zap className="w-3 h-3" /> Quy Trình Tự Động
+                <Zap className="w-3 h-3" /> {t.howBadge}
               </div>
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-                5 bước — Từ tạo đề đến phân tích điểm
+                {t.howTitle}
               </h2>
               <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                Toàn bộ quy trình được số hóa và tự động hóa. Giáo viên chỉ cần nhấn nút.
+                {t.howDesc}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 lg:gap-6">
               {[
-                { step: '01', icon: Brain,           title: 'Nhập Câu Hỏi',    desc: 'Thủ công hoặc AI trích xuất từ file', color: 'from-indigo-500 to-indigo-600' },
-                { step: '02', icon: FileSpreadsheet, title: 'Tạo Đề Thi',       desc: 'Random thông minh theo cấu hình', color: 'from-violet-500 to-violet-600' },
-                { step: '03', icon: Send,            title: 'Gửi Cho Học Sinh', desc: 'Email tự động hoặc chia sẻ link', color: 'from-pink-500 to-pink-600' },
-                { step: '04', icon: Eye,             title: 'Học Sinh Làm Bài', desc: 'Giao diện thân thiện, có timer', color: 'from-amber-500 to-amber-600' },
-                { step: '05', icon: BarChart3,       title: 'Chấm & Phân Tích', desc: 'Tự động chấm + dashboard kết quả', color: 'from-emerald-500 to-emerald-600' },
+                { step: '01', icon: Brain,           title: t.step1, desc: t.step1Desc, color: 'from-indigo-500 to-indigo-600' },
+                { step: '02', icon: FileSpreadsheet, title: t.step2, desc: t.step2Desc, color: 'from-violet-500 to-violet-600' },
+                { step: '03', icon: Send,            title: t.step3, desc: t.step3Desc, color: 'from-pink-500 to-pink-600' },
+                { step: '04', icon: Eye,             title: t.step4, desc: t.step4Desc, color: 'from-amber-500 to-amber-600' },
+                { step: '05', icon: BarChart3,       title: t.step5, desc: t.step5Desc, color: 'from-emerald-500 to-emerald-600' },
               ].map((s, i) => (
                 <div key={s.step} className="text-center group">
                   <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${s.color} text-white flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3`}>
                     <s.icon className="w-6 h-6" />
                   </div>
-                  <div className="text-xs font-black tracking-widest uppercase mb-1 text-indigo-500 dark:text-indigo-400">Bước {s.step}</div>
+                  <div className="text-xs font-black tracking-widest uppercase mb-1 text-indigo-500 dark:text-indigo-400">
+                    {lang === 'vi' ? 'Bước' : lang === 'en' ? 'Step' : lang === 'la' ? 'ຂັ້ນຕອນ' : '步骤'} {s.step}
+                  </div>
                   <h4 className="text-base font-bold mb-1" style={{ color: 'hsl(var(--foreground))' }}>{s.title}</h4>
                   <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>{s.desc}</p>
                   {i < 4 && (
@@ -540,22 +555,21 @@ export default function Home() {
             {/* Left: text */}
             <div>
               <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 border ${pastel.amber}`}>
-                <Bot className="w-3 h-3" /> Trí Tuệ Nhân Tạo
+                <Bot className="w-3 h-3" /> {t.aiBadge}
               </div>
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-4" style={{ color: 'hsl(var(--foreground))' }}>
-                AI không thay thế giáo viên —<br />AI giúp giáo viên <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">mạnh hơn</span>
+                {t.aiTitle1}<br />{t.aiTitle2} <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">{t.aiTitle3}</span>
               </h2>
               <p className="text-base leading-relaxed mb-6" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                Chúng tôi tích hợp <strong>Google Gemini AI</strong> vào hệ thống để tự động hóa những tác vụ lặp đi lặp lại,
-                giải phóng thời gian quý báu để giáo viên tập trung vào điều quan trọng nhất: <em>giảng dạy và truyền cảm hứng</em>.
+                {t.aiDesc}
               </p>
 
               <div className="space-y-4">
                 {[
-                  { icon: Brain,   text: 'AI trích xuất câu hỏi từ file Word/PDF — phân loại tự động theo độ khó, chương, bài' },
-                  { icon: Cpu,     text: 'Chấm điểm tự động ngay khi học sinh nộp bài — kết quả realtime trên dashboard' },
-                  { icon: TrendingUp, text: 'Phân tích xu hướng điểm, phát hiện câu hỏi quá dễ/khó, gợi ý cải thiện đề thi' },
-                  { icon: Sparkles, text: 'Công thức Toán, Lý, Hóa hiển thị đẹp với KaTeX — chuyên nghiệp như sách giáo khoa' },
+                  { icon: Brain,   text: t.aiItem1 },
+                  { icon: Cpu,     text: t.aiItem2 },
+                  { icon: TrendingUp, text: t.aiItem3 },
+                  { icon: Sparkles, text: t.aiItem4 },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className={`p-1.5 rounded-lg flex-shrink-0 border ${pastel.indigo}`}>
@@ -570,10 +584,10 @@ export default function Home() {
             {/* Right: visual grid */}
             <div className="grid grid-cols-2 gap-4">
               {[
-                { icon: Brain,           label: 'Gemini AI',     sub: 'Xử lý ngôn ngữ tự nhiên',   p: pastel.indigo },
-                { icon: FileSpreadsheet, label: 'Auto-Generate', sub: 'Sinh đề ngẫu nhiên',          p: pastel.violet },
-                { icon: BarChart3,       label: 'Analytics',     sub: 'Phân tích dữ liệu',           p: pastel.emerald },
-                { icon: Shield,          label: 'Security',      sub: 'UUID + hạn nộp + giới hạn',   p: pastel.rose },
+                { icon: Brain,           label: 'Gemini AI',     sub: lang === 'vi' ? 'Xử lý ngôn ngữ tự nhiên' : lang === 'en' ? 'Natural language processing' : lang === 'la' ? 'ປະມວນຜົນພາສາທຳມະຊາດ' : '自然语言处理',   p: pastel.indigo },
+                { icon: FileSpreadsheet, label: 'Auto-Generate', sub: lang === 'vi' ? 'Sinh đề ngẫu nhiên' : lang === 'en' ? 'Random exam generation' : lang === 'la' ? 'ສ້າງຂໍ້ສອບແບບສຸ່ມ' : '智能随机组卷',          p: pastel.violet },
+                { icon: BarChart3,       label: 'Analytics',     sub: lang === 'vi' ? 'Phân tích dữ liệu' : lang === 'en' ? 'Data analytics' : lang === 'la' ? 'ວິເຄາະຂໍ້ມູນ' : '学情数据分析',           p: pastel.emerald },
+                { icon: Shield,          label: 'Security',      sub: lang === 'vi' ? 'UUID + hạn nộp + giới hạn' : lang === 'en' ? 'UUID + deadline + limit' : lang === 'la' ? 'UUID + ກຳນົດສົ່ງ + ຈຳກັດ' : 'UUID + 截止时间 + 限制',   p: pastel.rose },
               ].map((card) => (
                 <div
                   key={card.label}
@@ -600,28 +614,52 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" style={{ borderColor: 'hsl(var(--border))' }}>
             <div className="text-center max-w-2xl mx-auto mb-12">
               <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 border ${pastel.emerald}`}>
-                <Users className="w-3 h-3" /> Dành Cho Ai?
+                <Users className="w-3 h-3" /> {lang === 'vi' ? 'Dành Cho Ai?' : lang === 'en' ? 'Who is it for?' : lang === 'la' ? 'ເໝາະສຳລັບໃຜ?' : '适用对象'}
               </div>
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
-                Giải pháp cho mọi vai trò
+                {lang === 'vi' ? 'Giải pháp cho mọi vai trò' : lang === 'en' ? 'Solutions for every role' : lang === 'la' ? 'ທາງເລືອກສຳລັບທຸກຄົນ' : '全角色覆盖的一站式解决方案'}
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 {
-                  role: '🎓 Giáo Viên',
-                  items: ['Tạo ngân hàng 1000+ câu hỏi', 'Sinh đề thi random 1 click', 'Gửi bài thi qua email', 'Xem thống kê điểm realtime', 'In đề & phiếu trả lời'],
+                  role: lang === 'vi' ? '🎓 Giáo Viên' : lang === 'en' ? '🎓 Teacher' : lang === 'la' ? '🎓 ຄູສອນ' : '🎓 教师',
+                  items: lang === 'vi' ? [
+                    'Tạo ngân hàng 1000+ câu hỏi', 'Sinh đề thi random 1 click', 'Gửi bài thi qua email', 'Xem thống kê điểm realtime', 'In đề & phiếu trả lời'
+                  ] : lang === 'en' ? [
+                    'Build 1000+ question banks', 'One-click random exam gen', 'Send exams via email notifications', 'Real-time score dashboard analytics', 'Print PDF exams & sheet keys'
+                  ] : lang === 'la' ? [
+                    'ສ້າງຄັງຄຳຖາມຫຼາຍກວ່າ 1000 ຂໍ້', 'ສ້າງຂໍ້ສອບແບບສຸ່ມໃນຄລິກດຽວ', 'ສົ່ງຂໍ້ສອບຜ່ານທາງອີເມວ', 'ເບິ່ງສະຖິຕິຄະແນນແບບຮຽວທາມ', 'ພິມຂໍ້ສອບ ແລະ ໃບຕອບ'
+                  ] : [
+                    '建设 1000+ 海量题库', '一键智能随机组卷', '系统自动发送邮件提醒', '实时大数据成绩分析看板', '导出 PDF 试卷与标准答题卡'
+                  ],
                   gradient: 'from-indigo-500 to-violet-600',
                 },
                 {
-                  role: '📚 Học Sinh',
-                  items: ['Vào thi chỉ bằng 1 link/mã', 'Giao diện dễ dùng, timer rõ ràng', 'Xem điểm ngay sau khi nộp', 'Hỗ trợ công thức Toán Lý Hóa', 'Làm bài trên mọi thiết bị'],
+                  role: lang === 'vi' ? '📚 Học Sinh' : lang === 'en' ? '📚 Student' : lang === 'la' ? '📚 ນັກຮຽນ' : '📚 学生',
+                  items: lang === 'vi' ? [
+                    'Vào thi chỉ bằng 1 link/mã', 'Giao diện dễ dùng, timer rõ ràng', 'Xem điểm ngay sau khi nộp', 'Hỗ trợ công thức Toán Lý Hóa', 'Làm bài trên mọi thiết bị'
+                  ] : lang === 'en' ? [
+                    'Join exams with a single link/code', 'Intuitive UI with visible countdown timers', 'Instant score results after submission', 'Math, Physics, Chemistry KaTeX display', 'Take tests seamlessly on any mobile/PC'
+                  ] : lang === 'la' ? [
+                    'ເຂົ້າເສັງງ່າຍໆຜ່ານລີ້ງ ຫຼື ລະຫັດ', 'ໜ້າຕ່າງໃຊ້ງ່າຍ ພ້ອມໂມງນັບຖອຍຫຼັງ', 'ເບິ່ງຄະແນນເສັງໄດ້ທັນທີຫຼັງສົ່ງ', 'ຮອງຮັບສູດຄະນິດສາດ ຟີຊິກ ເຄມີ', 'ເຮັດບົດເສັງໄດ້ໃນທຸກອຸປະກອນ'
+                  ] : [
+                    '仅需一个链接或邀请码即可开考', '界面简洁友好，内置清晰倒计时器', '交卷即刻查看客观题成绩', '完美支持数理化复杂公式显示', '完美适配手机、平板及电脑终端'
+                  ],
                   gradient: 'from-emerald-500 to-teal-600',
                 },
                 {
-                  role: '🏫 Quản Trị Viên',
-                  items: ['Quản lý toàn bộ hệ thống', 'Phân quyền Giáo viên / Học sinh', 'Theo dõi hoạt động toàn trường', 'Cấu hình môn học, lớp, khối', 'Export dữ liệu & báo cáo'],
+                  role: lang === 'vi' ? '🏫 Quản Trị Viên' : lang === 'en' ? '🏫 School Admin' : lang === 'la' ? '🏫 ຜູ້ບໍລິຫານ' : '🏫 管理员',
+                  items: lang === 'vi' ? [
+                    'Quản lý toàn bộ hệ thống', 'Phân quyền Giáo viên / Học sinh', 'Theo dõi hoạt động toàn trường', 'Cấu hình môn học, lớp, khối', 'Export dữ liệu & báo cáo'
+                  ] : lang === 'en' ? [
+                    'Manage full platform settings', 'Configure permissions for Teachers/Students', 'Monitor system-wide active logs', 'Set up subjects, classes, and groups', 'Export excel sheets & analytical reports'
+                  ] : lang === 'la' ? [
+                    'ຄຸ້ມຄອງລະບົບທັງໝົດ', 'ແບ່ງສິດທiການໃຊ້ງານ ຄູ / ນັກຮຽນ', 'ຕິດຕາມການເຄື່ອນໄຫວໃນລະບົບ', 'ຕັ້ງຄ່າວິຊາຮຽນ, ຫ້ອງຮຽນ, ຊັ້ນຮຽນ', 'ສົ່ງອອກຂໍ້ມູນ ແລະ ລາຍງານ'
+                  ] : [
+                    '管理系统全局后台配置', '灵活划分教师、学生等角色权限', '监控全校范围内的考试与活跃 data', '统一配置科目、班级与年级信息', '支持一键导出 Excel 报表与分析'
+                  ],
                   gradient: 'from-amber-500 to-orange-600',
                 },
               ].map((r) => (
@@ -664,22 +702,26 @@ export default function Home() {
                     <BookOpen className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold" style={{ color: 'hsl(var(--foreground))' }}>Học Sinh — Vào Thi</h3>
-                    <p className="text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>Nhập mã đề thi để bắt đầu</p>
+                    <h3 className="text-lg font-bold" style={{ color: 'hsl(var(--foreground))' }}>
+                      {lang === 'vi' ? 'Học Sinh — Vào Thi' : lang === 'en' ? 'Student — Take Exam' : lang === 'la' ? 'ນັກຮຽນ — ເຂົ້າເສັງ' : '学生 — 进入考试'}
+                    </h3>
+                    <p className="text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                      {lang === 'vi' ? 'Nhập mã đề thi để bắt đầu' : lang === 'en' ? 'Enter exam code to begin' : lang === 'la' ? 'ປ້ອນລະຫັດເສັງເພື່ອເລີ່ມຕົ້ນ' : '输入考试邀请码以开始'}
+                    </p>
                   </div>
                 </div>
                 <form onSubmit={handleGoToExam} className="space-y-3">
                   <input
                     type="text"
-                    placeholder="Nhập mã đề thi..."
+                    placeholder={lang === 'vi' ? 'Nhập mã đề thi...' : lang === 'en' ? 'Enter exam code...' : lang === 'la' ? 'ປ້ອນລະຫັດເສັງ...' : '输入考试邀请码...'}
                     value={examId}
                     onChange={(e) => setExamId(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     style={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
                   />
                   {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
-                  <button type="submit" className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-500/20 cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2">
-                    🚀 Vào Phòng Thi <ArrowRight className="w-4 h-4" />
+                  <button type="submit" className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-500/20 cursor-pointer active:scale-95 flex items-center justify-center gap-2">
+                    🚀 {lang === 'vi' ? 'Vào Phòng Thi' : lang === 'en' ? 'Enter Exam Room' : lang === 'la' ? 'ເຂົ້າຫ້ອງເສັງ' : '进入考场'} <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
               </div>
@@ -694,21 +736,25 @@ export default function Home() {
                     <ClipboardList className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold" style={{ color: 'hsl(var(--foreground))' }}>Giáo Viên / Admin</h3>
-                    <p className="text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>Đăng nhập để quản trị hệ thống</p>
+                    <h3 className="text-lg font-bold" style={{ color: 'hsl(var(--foreground))' }}>
+                      {lang === 'vi' ? 'Giáo Viên / Admin' : lang === 'en' ? 'Teacher / Admin' : lang === 'la' ? 'ຄູສອນ / ຜູ້ບໍລິຫານ' : '教师 / 管理员'}
+                    </h3>
+                    <p className="text-[11px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                      {lang === 'vi' ? 'Đăng nhập để quản trị hệ thống' : lang === 'en' ? 'Login to manage the system' : lang === 'la' ? 'ເຂົ້າສູ່ລະບົບເພື່ອຈັດການ' : '登录以管理系统'}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    Truy cập bảng điều khiển quản trị để tạo đề thi, quản lý ngân hàng câu hỏi, theo dõi kết quả học sinh và xuất báo cáo.
+                    {lang === 'vi' ? 'Truy cập bảng điều khiển quản trị để tạo đề thi, quản lý ngân hàng câu hỏi, theo dõi kết quả học sinh và xuất báo cáo.' : lang === 'en' ? 'Access the admin dashboard to create exams, manage question banks, track student results, and export analytics reports.' : lang === 'la' ? 'ເຂົ້າເຖິງແຜງຄວບຄຸມເພື່ອສ້າງຂໍ້ສອບ, ຈັດການຄັງຄຳຖາມ, ຕິດຕາມຜົນການຮຽນ ແລະ ສົ່ງອອກລາຍງານ.' : '访问管理员控制台以创建考试、管理题库、跟踪学生成绩并导出分析报表。'}
                   </p>
                   <div className="flex gap-3">
-                    <a href={getDashboardUrl()} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white font-bold text-sm text-center transition-all shadow-lg shadow-violet-500/20 cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2">
-                      {profile ? 'Vào Làm Việc Ngay' : 'Đăng Nhập'} <ArrowRight className="w-4 h-4" />
+                    <a href={getDashboardUrl()} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white font-bold text-sm text-center transition-all shadow-lg shadow-violet-500/20 cursor-pointer active:scale-95 flex items-center justify-center gap-2">
+                      {profile ? (lang === 'vi' ? 'Vào Làm Việc Ngay' : lang === 'en' ? 'Enter Dashboard' : lang === 'la' ? 'ເຂົ້າແຜງເຮັດວຽк' : '进入工作台') : t.login} <ArrowRight className="w-4 h-4" />
                     </a>
                   </div>
                   <p className="text-[10px] text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    {profile ? `Phiên hoạt động: ${profile.name}` : 'Chưa có tài khoản? Liên hệ quản trị viên để được cấp quyền truy cập.'}
+                    {profile ? (lang === 'vi' ? 'Phiên hoạt động: ' : lang === 'en' ? 'Active session: ' : lang === 'la' ? 'ເຊດຊັນປັດຈຸບັນ: ' : '当前在线: ') + profile.name : (lang === 'vi' ? 'Chưa có tài khoản? Liên hệ quản trị viên để được cấp quyền truy cập.' : lang === 'en' ? 'No account yet? Contact administrator for access rights.' : lang === 'la' ? 'ຍັງບໍ່ມີບັນຊີ? ຕິດຕໍ່ຜູ້ດູແລລະບົບເພື່ອຂໍສິດເຂົ້າໃຊ້ງານ.' : '尚未拥有账户？请联系管理员开通权限。')}
                   </p>
                 </div>
               </div>
@@ -735,8 +781,8 @@ export default function Home() {
               <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-violet-500" /> Gemini AI</span>
               <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-500" /> KaTeX</span>
             </div>
-            <p className="text-xs sm:text-sm font-semibold tracking-wide" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              © 2026 BaoAn Exam — Số hóa giáo dục, kiến tạo tương lai.
+            <p className="text-xs sm:text-sm font-semibold tracking-wide text-center md:text-right" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              {t.footerRights}
             </p>
           </div>
         </div>

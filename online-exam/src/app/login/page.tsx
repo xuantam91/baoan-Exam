@@ -7,6 +7,7 @@ import { getClasses } from '@/app/actions/metadata';
 import { getStudents } from '@/app/actions/students';
 import ThemeToggle from '@/components/ThemeToggle';
 import ThemePicker from '@/components/ThemePicker';
+import LanguagePicker from '@/components/LanguagePicker';
 import Logo from '@/components/Logo';
 import { 
   GraduationCap, 
@@ -122,6 +123,7 @@ export default function LoginPage() {
 
       {/* Floating Theme Tools */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
+        <LanguagePicker align="down" />
         <ThemePicker align="down" />
         <ThemeToggle />
       </div>

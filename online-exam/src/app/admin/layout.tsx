@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import ThemePicker from '@/components/ThemePicker';
+import LanguagePicker from '@/components/LanguagePicker';
 import Logo from '@/components/Logo';
 import { getCurrentUser, signOutAction } from '@/app/actions/auth';
 import {
@@ -184,9 +185,10 @@ export default function AdminLayout({
             <span className="flex-1">Trang Chủ</span>
           </Link>
 
-          {/* Row 2: Theme controls — clear, spacious */}
+          {/* Row 2: Theme and Language controls — clear, spacious */}
           <div className="flex items-center gap-2 px-1">
-            <div className="flex-1">
+            <div className="flex-1 flex items-center gap-1.5">
+              <LanguagePicker align="up" menuAlign="left" />
               <ThemePicker align="up" menuAlign="left" />
             </div>
             <ThemeToggle />
