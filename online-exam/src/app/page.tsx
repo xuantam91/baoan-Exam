@@ -269,7 +269,7 @@ export default function Home() {
             {profile ? (
               <a href={getDashboardUrl()} className="inline-flex items-center justify-center p-2.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 cursor-pointer active:scale-95 transition-transform" title={`${t.dashboard} (${profile.name})`}>
                 <Users className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline ml-1.5 text-sm font-bold whitespace-nowrap">{t.dashboard}</span>
+                <span className="hidden sm:inline ml-1.5 text-sm font-bold whitespace-nowrap">{t.dashboard} ({profile.name})</span>
               </a>
             ) : (
               <a href="/login" className="inline-flex items-center justify-center p-2.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-500/20 cursor-pointer active:scale-95 transition-transform" title={t.login}>
