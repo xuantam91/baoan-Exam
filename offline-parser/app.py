@@ -21,6 +21,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Check shutdown state
+if "is_shutting_down" in st.session_state and st.session_state.is_shutting_down:
+    st.markdown("""
+    <div style="text-align: center; margin-top: 100px; font-family: sans-serif;">
+        <h1 style="color: #4F46E5; font-size: 2.5rem; font-weight: 800; margin-bottom: 10px;">👋 Đã Tắt Ứng Dụng Thành Công</h1>
+        <p style="font-size: 1.1rem; color: #4B5563; margin-bottom: 30px;">Cảm ơn bạn đã sử dụng hệ thống bóc tách đề thi BaoAn Exam.</p>
+        <div style="background-color: #DEF7EC; color: #03543F; padding: 18px 30px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <strong style="font-size: 1.1rem;">✓ Máy chủ local đã dừng hoạt động an toàn.</strong><br/>
+            <span style="font-size: 0.9rem; opacity: 0.85; display: inline-block; margin-top: 6px;">Bây giờ bạn có thể đóng tab trình duyệt này.</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
 # Custom CSS for custom premium styles (Light/Dark themes support)
 st.markdown("""
 <style>
@@ -294,10 +308,15 @@ if st.sidebar.button("🔄 Làm mới dữ liệu danh mục", use_container_wid
 
 st.sidebar.markdown("---")
 if st.sidebar.button("🔴 Tắt ứng dụng (Đóng Server)", use_container_width=True, type="primary"):
-    st.sidebar.info("Đang dừng ứng dụng... Bạn có thể đóng tab này.")
-    import os
-    import signal
-    os.kill(os.getpid(), signal.SIGINT)
+    st.session_state.is_shutting_down = True
+    import time
+    def kill_server():
+        time.sleep(1.0)
+        import os
+        import signal
+        os.kill(os.getpid(), signal.SIGINT)
+    threading.Thread(target=kill_server).start()
+    st.rerun()
 
 # Form to quickly add subjects/classes if database is empty
 with st.sidebar.expander("➕ Thêm nhanh Môn / Lớp", expanded=False):
