@@ -10,6 +10,8 @@ import { translations, Language } from '@/lib/translations';
 import { getCurrentUser } from '@/app/actions/auth';
 import {
   LogIn,
+  Menu,
+  X,
   BookOpen,
   GraduationCap,
   ClipboardList,
@@ -154,6 +156,7 @@ function Section({
 export default function Home() {
   const router = useRouter();
   const [lang, setLang] = useState<Language>('vi');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const saved = (localStorage.getItem('lang') as Language) || 'vi';
@@ -265,23 +268,145 @@ export default function Home() {
             <a href="#start" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{t.navStart}</a>
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Desktop Controls */}
+          <div className="hidden md:flex items-center gap-3">
             {profile ? (
               <a href={getDashboardUrl()} className="inline-flex items-center justify-center p-2.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 cursor-pointer active:scale-95 transition-transform" title={`${t.dashboard} (${profile.name})`}>
                 <Users className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline ml-1.5 text-sm font-bold whitespace-nowrap">{t.dashboard} ({profile.name})</span>
+                <span className="ml-1.5 text-sm font-bold whitespace-nowrap">{t.dashboard} ({profile.name})</span>
               </a>
             ) : (
               <a href="/login" className="inline-flex items-center justify-center p-2.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-500/20 cursor-pointer active:scale-95 transition-transform" title={t.login}>
                 <LogIn className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden sm:inline ml-1.5 text-sm font-bold whitespace-nowrap">{t.login}</span>
+                <span className="ml-1.5 text-sm font-bold whitespace-nowrap">{t.login}</span>
               </a>
             )}
             <LanguagePicker align="down" />
             <ThemePicker align="down" />
             <ThemeToggle />
           </div>
+
+          {/* Mobile Hamburger Menu Toggle Button */}
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="md:hidden p-2 rounded-xl border transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+            style={{
+              backgroundColor: 'hsl(var(--accent))',
+              borderColor: 'hsl(var(--border))',
+              color: 'hsl(var(--foreground))',
+            }}
+            title="Menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
+
+        {/* Mobile Dropdown Menu Overlay */}
+        {mobileMenuOpen && (
+          <div 
+            className="md:hidden border-b animate-fade-in"
+            style={{ 
+              backgroundColor: 'hsl(var(--card))', 
+              borderBottomColor: 'hsl(var(--border))' 
+            }}
+          >
+            <div className="px-4 pt-3 pb-6 space-y-4">
+              {/* Navigation Links */}
+              <nav className="flex flex-col space-y-2.5">
+                <a 
+                  href="#features" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl font-bold text-sm transition-colors hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20"
+                  style={{ color: 'hsl(var(--muted-foreground))' }}
+                >
+                  {t.navFeatures}
+                </a>
+                <a 
+                  href="#how-it-works" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl font-bold text-sm transition-colors hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20"
+                  style={{ color: 'hsl(var(--muted-foreground))' }}
+                >
+                  {t.navProcess}
+                </a>
+                <a 
+                  href="#about-me" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl font-bold text-sm transition-colors hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20"
+                  style={{ color: 'hsl(var(--muted-foreground))' }}
+                >
+                  {t.navTeacher}
+                </a>
+                <a 
+                  href="#stats" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl font-bold text-sm transition-colors hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20"
+                  style={{ color: 'hsl(var(--muted-foreground))' }}
+                >
+                  {t.navStats}
+                </a>
+                <a 
+                  href="#start" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl font-bold text-sm transition-colors hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20"
+                  style={{ color: 'hsl(var(--muted-foreground))' }}
+                >
+                  {t.navStart}
+                </a>
+              </nav>
+
+              <hr style={{ borderColor: 'hsl(var(--border))' }} />
+
+              {/* Preferences Settings Rows */}
+              <div className="space-y-3.5 px-3">
+                {/* Language Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                    {lang === 'vi' ? 'Ngôn Ngữ' : lang === 'en' ? 'Language' : lang === 'la' ? 'ພາສາ' : '语言'}
+                  </span>
+                  <LanguagePicker align="down" menuAlign="right" />
+                </div>
+
+                {/* Theme Color Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                    {lang === 'vi' ? 'Bảng Màu' : lang === 'en' ? 'Theme Color' : lang === 'la' ? 'ໂທນສີ' : '配色主题'}
+                  </span>
+                  <ThemePicker align="down" menuAlign="right" />
+                </div>
+
+                {/* Light/Dark Toggle Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                    {lang === 'vi' ? 'Chế Độ Tối' : lang === 'en' ? 'Dark Mode' : lang === 'la' ? 'ໂໝດກາງຄືນ' : '深色模式'}
+                  </span>
+                  <ThemeToggle />
+                </div>
+              </div>
+
+              {/* Login / Dashboard Button (CTA) */}
+              <div className="pt-2">
+                {profile ? (
+                  <a 
+                    href={getDashboardUrl()} 
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-extrabold shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-transform"
+                  >
+                    <Users className="w-4 h-4 flex-shrink-0" />
+                    <span>{t.dashboard} ({profile.name})</span>
+                  </a>
+                ) : (
+                  <a 
+                    href="/login" 
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-extrabold shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-transform"
+                  >
+                    <LogIn className="w-4 h-4 flex-shrink-0" />
+                    <span>{t.login}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ═══════════════════════════════════════════════════
