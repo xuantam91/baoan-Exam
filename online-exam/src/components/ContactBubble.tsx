@@ -75,9 +75,23 @@ export default function ContactBubble() {
           onClick={scrollToTop}
           aria-label="Về đầu trang"
           title="Về đầu trang"
-          className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg cursor-pointer bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-right duration-300"
+          className="w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer border transition-all hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-right duration-300"
+          style={{
+            backgroundColor: 'hsl(var(--card))',
+            borderColor: 'hsl(var(--border))',
+            color: 'hsl(var(--primary))',
+            boxShadow: '0 4px 20px -2px hsl(var(--primary) / 0.2), 0 2px 8px -1px hsl(var(--primary) / 0.1)',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'hsl(var(--accent))';
+            (e.currentTarget as HTMLElement).style.borderColor = 'hsl(var(--primary) / 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'hsl(var(--card))';
+            (e.currentTarget as HTMLElement).style.borderColor = 'hsl(var(--border))';
+          }}
         >
-          <ArrowUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <ArrowUp className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" style={{ color: 'hsl(var(--primary))' }} />
         </button>
       )}
 
