@@ -7,6 +7,7 @@ import { getClasses } from '@/app/actions/metadata';
 import { getStudents } from '@/app/actions/students';
 import ThemeToggle from '@/components/ThemeToggle';
 import ThemePicker from '@/components/ThemePicker';
+import Logo from '@/components/Logo';
 import { 
   GraduationCap, 
   Mail, 
@@ -139,8 +140,8 @@ export default function LoginPage() {
           <div className="absolute top-3 right-3 text-white/20 animate-pulse">
             <Sparkles className="w-5 h-5" />
           </div>
-          <div className="w-12 h-12 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto text-white shadow-inner">
-            <GraduationCap className="w-7 h-7" />
+          <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto text-white shadow-inner border border-white/20">
+            <Logo className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-extrabold tracking-tight">Hệ Thống Thi Trực Tuyến BaoAn</h2>
           <p className="text-xs text-indigo-100 font-medium">Số hóa giáo dục · Chấm điểm tự động bằng AI</p>

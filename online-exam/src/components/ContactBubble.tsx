@@ -67,7 +67,7 @@ export default function ContactBubble() {
     : `https://facebook.com/${contacts.facebook}`;
 
   return (
-    <div className="fixed bottom-20 right-6 z-50 flex items-center gap-3.5 select-none">
+    <div className="fixed bottom-28 right-6 z-50 flex items-center gap-3.5 select-none">
       
       {/* ── Floating Back to Top Button (Left of contact button) ── */}
       {showScrollTop && (

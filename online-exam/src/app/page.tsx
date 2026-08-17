@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import ThemePicker from '@/components/ThemePicker';
+import Logo from '@/components/Logo';
 import { getCurrentUser } from '@/app/actions/auth';
 import {
   BookOpen,
@@ -217,12 +218,12 @@ export default function Home() {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
             className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity"
           >
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl text-white shadow-lg shadow-indigo-500/25">
-              <GraduationCap className="w-6 h-6" />
+            <div className="p-1 bg-gradient-to-br from-indigo-500/10 to-violet-600/10 rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 flex items-center justify-center">
+              <Logo className="w-8 h-8" />
             </div>
             <div>
               <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">BaoAn Exam</span>
-              <p className="text-[9px] font-semibold -mt-0.5 tracking-wider uppercase" style={{ color: 'hsl(var(--muted-foreground))' }}>AI-Powered Education</p>
+              <p className="text-[10px] font-bold -mt-0.5 tracking-wider uppercase text-indigo-600 dark:text-indigo-400">AI-Powered Education</p>
             </div>
           </div>
 
@@ -359,8 +360,8 @@ export default function Home() {
                 <div className={`p-3 rounded-xl w-fit mb-4 border transition-transform group-hover:scale-110 ${f.p}`}>
                   <f.icon className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-bold mb-2" style={{ color: 'hsl(var(--foreground))' }}>{f.title}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>{f.desc}</p>
+                <h3 className="text-lg font-extrabold mb-2" style={{ color: 'hsl(var(--foreground))' }}>{f.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -406,14 +407,14 @@ export default function Home() {
                 <h2 className="text-3xl font-black tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
                   Khoa Học Tự Nhiên & Giáo Dục STEM
                 </h2>
-                <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                <p className="text-base font-bold text-indigo-600 dark:text-indigo-400">
                   Dạy học số hóa tích hợp liên môn: Sinh học - Vật lý - Hóa học
                 </p>
               </div>
 
               {/* Quotes */}
               <div className="p-4 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900 bg-indigo-50/20 dark:bg-indigo-950/10 space-y-2">
-                <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
                   Thiết kế học liệu trực quan, ứng dụng các thí nghiệm thực tế lớp 7 (chương Tế bào, Năng lượng, trao đổi chất) và các dự án STEM kích thích sáng tạo, giúp học sinh phát triển năng lực tự chủ và giải quyết vấn đề.
                 </p>
               </div>
@@ -432,11 +433,11 @@ export default function Home() {
                       { title: 'Tích Hợp Liên Môn Lý - Hóa - Sinh', desc: 'Phương pháp kết nối các định luật tự nhiên trực quan' },
                       { title: 'Dự án STEM sáng tạo', desc: 'Thiết kế mô hình học tập, kết nối tri thức với thực tiễn' },
                     ].map((item) => (
-                      <li key={item.title} className="text-xs flex items-start gap-2">
+                      <li key={item.title} className="text-sm flex items-start gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
                         <div>
                           <span className="font-bold" style={{ color: 'hsl(var(--foreground))' }}>{item.title}:</span>
-                          <span className="text-[10px] block" style={{ color: 'hsl(var(--muted-foreground))' }}>{item.desc}</span>
+                          <span className="text-xs block" style={{ color: 'hsl(var(--muted-foreground))' }}>{item.desc}</span>
                         </div>
                       </li>
                     ))}
@@ -454,11 +455,11 @@ export default function Home() {
                       { title: 'Triết lý sống mỗi ngày', desc: '"Sức khỏe là nền tảng, Kiến thức là sức mạnh" (Tốt hơn 1%)' },
                       { title: 'Dinh dưỡng tự nhiên', desc: 'Sử dụng Chanh đào ủ muối, Dầu lạc, Matcha 100% Pure, Nghệ' },
                     ].map((item) => (
-                      <li key={item.title} className="text-xs flex items-start gap-2">
+                      <li key={item.title} className="text-sm flex items-start gap-2">
                         <Heart className="w-3.5 h-3.5 text-rose-500 mt-0.5 flex-shrink-0" />
                         <div>
                           <span className="font-bold" style={{ color: 'hsl(var(--foreground))' }}>{item.title}:</span>
-                          <span className="text-[10px] block" style={{ color: 'hsl(var(--muted-foreground))' }}>{item.desc}</span>
+                          <span className="text-xs block" style={{ color: 'hsl(var(--muted-foreground))' }}>{item.desc}</span>
                         </div>
                       </li>
                     ))}
@@ -469,13 +470,13 @@ export default function Home() {
 
               {/* Goal Badges */}
               <div className="flex flex-wrap gap-2 pt-2">
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/20">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/20">
                   Khoa Học Tự Nhiên
                 </span>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/20">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/20">
                   Dự Án STEM
                 </span>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/20">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-900/20">
                   Số Hóa Học Liệu
                 </span>
               </div>
@@ -515,9 +516,9 @@ export default function Home() {
                   <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${s.color} text-white flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3`}>
                     <s.icon className="w-6 h-6" />
                   </div>
-                  <div className="text-[10px] font-black tracking-widest uppercase mb-1 text-indigo-500 dark:text-indigo-400">Bước {s.step}</div>
-                  <h4 className="text-sm font-bold mb-1" style={{ color: 'hsl(var(--foreground))' }}>{s.title}</h4>
-                  <p className="text-[11px] leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>{s.desc}</p>
+                  <div className="text-xs font-black tracking-widest uppercase mb-1 text-indigo-500 dark:text-indigo-400">Bước {s.step}</div>
+                  <h4 className="text-base font-bold mb-1" style={{ color: 'hsl(var(--foreground))' }}>{s.title}</h4>
+                  <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>{s.desc}</p>
                   {i < 4 && (
                     <div className="hidden sm:block mt-3 mx-auto text-indigo-300 dark:text-indigo-800">
                       <ArrowRight className="w-4 h-4 mx-auto" />
@@ -544,7 +545,7 @@ export default function Home() {
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-4" style={{ color: 'hsl(var(--foreground))' }}>
                 AI không thay thế giáo viên —<br />AI giúp giáo viên <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">mạnh hơn</span>
               </h2>
-              <p className="text-sm leading-relaxed mb-6" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              <p className="text-base leading-relaxed mb-6" style={{ color: 'hsl(var(--muted-foreground))' }}>
                 Chúng tôi tích hợp <strong>Google Gemini AI</strong> vào hệ thống để tự động hóa những tác vụ lặp đi lặp lại,
                 giải phóng thời gian quý báu để giáo viên tập trung vào điều quan trọng nhất: <em>giảng dạy và truyền cảm hứng</em>.
               </p>
@@ -560,7 +561,7 @@ export default function Home() {
                     <div className={`p-1.5 rounded-lg flex-shrink-0 border ${pastel.indigo}`}>
                       <item.icon className="w-4 h-4" />
                     </div>
-                    <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>{item.text}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>{item.text}</p>
                   </div>
                 ))}
               </div>
@@ -723,18 +724,18 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-lg text-white">
-                <GraduationCap className="w-4 h-4" />
+              <div className="p-1 bg-gradient-to-br from-indigo-500/10 to-violet-600/10 rounded-lg border border-indigo-200/50 dark:border-indigo-900/30 flex items-center justify-center">
+                <Logo className="w-5 h-5" />
               </div>
               <span className="font-extrabold text-sm bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">BaoAn Exam</span>
             </div>
-            <div className="flex items-center gap-5 text-xs font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <div className="flex items-center gap-5 text-xs font-semibold" style={{ color: 'hsl(var(--muted-foreground))' }}>
               <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-emerald-500" /> Supabase</span>
               <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-blue-500" /> Vercel</span>
               <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-violet-500" /> Gemini AI</span>
               <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-500" /> KaTeX</span>
             </div>
-            <p className="text-[10px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <p className="text-xs sm:text-sm font-semibold tracking-wide" style={{ color: 'hsl(var(--muted-foreground))' }}>
               © 2026 BaoAn Exam — Số hóa giáo dục, kiến tạo tương lai.
             </p>
           </div>

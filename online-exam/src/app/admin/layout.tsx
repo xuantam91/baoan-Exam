@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import ThemePicker from '@/components/ThemePicker';
+import Logo from '@/components/Logo';
 import { getCurrentUser, signOutAction } from '@/app/actions/auth';
 import {
   GraduationCap,
@@ -100,8 +101,8 @@ export default function AdminLayout({
           style={{ borderBottom: '1px solid hsl(var(--border))' }}
         >
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl text-white shadow-lg shadow-indigo-500/25 flex-shrink-0">
-              <GraduationCap className="w-5 h-5" />
+            <div className="p-1 bg-gradient-to-br from-indigo-500/10 to-violet-600/10 rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 flex items-center justify-center flex-shrink-0">
+              <Logo className="w-7 h-7" />
             </div>
             <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
               BaoAn Exam
@@ -231,8 +232,8 @@ export default function AdminLayout({
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
             className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
           >
-            <div className="p-1 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-lg text-white">
-              <GraduationCap className="w-4 h-4" />
+            <div className="p-0.5 bg-gradient-to-br from-indigo-500/10 to-violet-600/10 rounded-lg border border-indigo-200/50 dark:border-indigo-900/30 flex items-center justify-center">
+              <Logo className="w-5 h-5" />
             </div>
             <span className="font-extrabold text-sm bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
               BaoAn Exam
