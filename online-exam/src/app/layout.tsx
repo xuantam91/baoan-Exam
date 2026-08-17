@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: "Hệ thống thi trắc nghiệm trực tuyến cho giáo viên, học sinh và phụ huynh",
 };
 
+import ContactBubble from "@/components/ContactBubble";
+
 export default function RootLayout({
   children,
 }: {
@@ -51,6 +53,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col transition-colors duration-200">
         {children}
+        <ContactBubble />
       </body>
     </html>
   );

@@ -13,9 +13,25 @@ import {
   deleteChapter,
   getLessons,
   createLesson,
-  deleteLesson
+  deleteLesson,
+  getSystemSettings,
+  updateSystemSettings
 } from '@/app/actions/metadata';
-import { BookOpen, School, Trash2, Plus, Loader2, Layers, FolderPlus, ListPlus, FolderOpen } from 'lucide-react';
+import { 
+  BookOpen, 
+  School, 
+  Trash2, 
+  Plus, 
+  Loader2, 
+  Layers, 
+  FolderPlus, 
+  ListPlus, 
+  FolderOpen,
+  PhoneCall,
+  Link as LinkIcon,
+  Save,
+  CheckCircle,
+} from 'lucide-react';
 
 export default function ConfigPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -23,6 +39,44 @@ export default function ConfigPage() {
   
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [loadingClasses, setLoadingClasses] = useState(true);
+
+  // System contacts states
+  const [phone, setPhone] = useState('');
+  const [zalo, setZalo] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [contactsError, setContactsError] = useState('');
+  const [contactsSuccess, setContactsSuccess] = useState('');
+  const [contactsSubmitting, setContactsSubmitting] = useState(false);
+
+  // Load contacts configuration on mount
+  useEffect(() => {
+    async function loadContacts() {
+      const res = await getSystemSettings('contacts');
+      if (res.success && res.data) {
+        setPhone(res.data.phone || '');
+        setZalo(res.data.zalo || '');
+        setFacebook(res.data.facebook || '');
+      }
+      setLoadingContacts(false);
+    }
+    loadContacts();
+  }, []);
+
+  const handleSaveContacts = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactsError('');
+    setContactsSuccess('');
+    setContactsSubmitting(true);
+    const res = await updateSystemSettings('contacts', { phone, zalo, facebook });
+    if (res.success) {
+      setContactsSuccess('Đã cập nhật cấu hình liên hệ thành công!');
+      setTimeout(() => setContactsSuccess(''), 3000);
+    } else {
+      setContactsError(res.error || 'Có lỗi xảy ra khi cập nhật.');
+    }
+    setContactsSubmitting(false);
+  };
   
   // Form states
   const [subName, setSubName] = useState('');
@@ -539,6 +593,142 @@ export default function ConfigPage() {
               );
             })}
           </div>
+        )}
+      </div>
+
+      {/* ── SECTION: SYSTEM CONTACTS CONFIGURATION ── */}
+      <div 
+        className="card-el p-6 mt-8 rounded-2xl shadow-sm border transition-all"
+        style={{
+          backgroundColor: 'hsl(var(--card))',
+          borderColor: 'hsl(var(--border))',
+        }}
+      >
+        <div className="flex items-center gap-2.5 mb-5">
+          <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
+            <PhoneCall className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Cấu Hình Liên Hệ (Bong Bóng Contact)</h2>
+            <p className="text-xs text-slate-400">Thiết lập Zalo, Facebook, Hotline hiển thị ở góc màn hình ngoài Landing Page và trang làm việc.</p>
+          </div>
+        </div>
+
+        {loadingContacts ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+          </div>
+        ) : (
+          <form onSubmit={handleSaveContacts} className="space-y-4">
+            {contactsError && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-xl border border-rose-100 dark:border-rose-900/30">
+                ⚠️ {contactsError}
+              </div>
+            )}
+            {contactsSuccess && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-100 dark:border-emerald-900/30 flex items-center gap-1.5 animate-fade-in">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                <span>{contactsSuccess}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Phone number */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Số Điện Thoại Hotline
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <PhoneCall className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="Ví dụ: 0978888777"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    style={{
+                      backgroundColor: 'hsl(var(--background))',
+                      borderColor: 'hsl(var(--border))',
+                      color: 'hsl(var(--foreground))',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Zalo Link */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Link Zalo Chat (hoặc số Zalo)
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <LinkIcon className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: https://zalo.me/0978888777"
+                    value={zalo}
+                    onChange={(e) => setZalo(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    style={{
+                      backgroundColor: 'hsl(var(--background))',
+                      borderColor: 'hsl(var(--border))',
+                      color: 'hsl(var(--foreground))',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Facebook Link */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Link Facebook Fanpage / Cá Nhân
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <LinkIcon className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: https://facebook.com/username"
+                    value={facebook}
+                    onChange={(e) => setFacebook(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    style={{
+                      backgroundColor: 'hsl(var(--background))',
+                      borderColor: 'hsl(var(--border))',
+                      color: 'hsl(var(--foreground))',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={contactsSubmitting}
+                className="flex items-center gap-1.5 py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+              >
+                {contactsSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang cập nhật...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Lưu Cấu Hình Liên Hệ</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         )}
       </div>
 

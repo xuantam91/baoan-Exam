@@ -213,7 +213,10 @@ export default function Home() {
           ═══════════════════════════════════════════════════ */}
       <header className="border-b sticky top-0 z-50 backdrop-blur-xl" style={{ backgroundColor: 'hsl(var(--card) / 0.9)', borderBottomColor: 'hsl(var(--border))' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
+            className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity"
+          >
             <div className="p-2 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl text-white shadow-lg shadow-indigo-500/25">
               <GraduationCap className="w-6 h-6" />
             </div>

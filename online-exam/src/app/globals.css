@@ -85,6 +85,22 @@
     --accent-foreground: 32 80% 25%;
   }
 
+  /* ── PINK THEME: Candy/Pastel Pink ────────────────────── */
+  :root.theme-pink {
+    --brand-50:   330 90% 96%;
+    --brand-100:  330 90% 91%;
+    --brand-500:  330 85% 65%;
+    --brand-600:  330 80% 58%;
+    --brand-700:  330 75% 48%;
+    --background: 330 25% 94%;
+    --foreground: 330 60% 8%;
+    --primary:    330 80% 58%;
+    --primary-foreground: 0 0% 100%;
+    --ring:       330 80% 58%;
+    --accent:     330 90% 95%;
+    --accent-foreground: 330 85% 25%;
+  }
+
   /* ── DARK MODE (shared across all themes) ─────────────── */
   .dark {
     --background:        228 39%  7%;
@@ -108,6 +124,7 @@
   .dark.theme-ocean  { --primary: 200 90% 55%; --ring: 200 90% 55%; }
   .dark.theme-forest { --primary: 160 70% 45%; --ring: 160 70% 45%; }
   .dark.theme-sunset { --primary: 32 95% 58%;  --ring: 32 95% 58%;  }
+  .dark.theme-pink   { --primary: 330 85% 65%;  --ring: 330 85% 65%;  }
 }
 
 /* ==========================================================

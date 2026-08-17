@@ -13,7 +13,7 @@ export default function ThemeToggle() {
     if (mode === 'dark') {
       html.classList.add('dark');
       // Remove color themes in dark mode
-      ['theme-ocean', 'theme-forest', 'theme-sunset'].forEach((c) => html.classList.remove(c));
+      ['theme-ocean', 'theme-forest', 'theme-sunset', 'theme-pink'].forEach((c) => html.classList.remove(c));
     } else {
       html.classList.remove('dark');
       // Restore saved color theme

@@ -8,15 +8,17 @@ const THEMES = [
   { id: 'ocean',  label: 'Xanh biển', sub: 'Đại dương',   color: '#0EA5E9' },
   { id: 'forest', label: 'Rừng xanh', sub: 'Thiên nhiên', color: '#10B981' },
   { id: 'sunset', label: 'Hoàng hôn', sub: 'Ấm áp',       color: '#F59E0B' },
+  { id: 'pink',   label: 'Hồng',      sub: 'Kẹo ngọt',   color: '#EC4899' },
 ] as const;
 
 type ThemeId = (typeof THEMES)[number]['id'];
 
 interface ThemePickerProps {
   align?: 'up' | 'down';
+  menuAlign?: 'left' | 'right';
 }
 
-export default function ThemePicker({ align = 'down' }: ThemePickerProps) {
+export default function ThemePicker({ align = 'down', menuAlign = 'right' }: ThemePickerProps) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<ThemeId>('indigo');
   const [isDark, setIsDark] = useState(false);
@@ -65,6 +67,8 @@ export default function ThemePicker({ align = 'down' }: ThemePickerProps) {
     ? 'bottom-full mb-2'
     : 'top-full mt-2';
 
+  const menuAlignClass = menuAlign === 'left' ? 'left-0' : 'right-0';
+
   return (
     <div className="relative inline-block text-left">
       {/* Trigger button */}
@@ -90,7 +94,7 @@ export default function ThemePicker({ align = 'down' }: ThemePickerProps) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className={`absolute right-0 z-50 rounded-xl shadow-2xl p-2 w-48 animate-fade-in ${dropdownPlacementClass}`}
+            className={`absolute z-50 rounded-xl shadow-2xl p-2 w-48 animate-fade-in ${dropdownPlacementClass} ${menuAlignClass}`}
             style={{
               backgroundColor: 'hsl(var(--card))',
               border: '1px solid hsl(var(--border))',

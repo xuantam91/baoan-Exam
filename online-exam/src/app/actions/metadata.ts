@@ -200,3 +200,51 @@ export async function deleteLesson(id: string) {
     return { success: false, error: error.message };
   }
 }
+
+/* ── System Settings Actions ────────────────────────────── */
+const DEFAULT_CONTACTS = {
+  phone: '0978888777',
+  zalo: 'https://zalo.me',
+  facebook: 'https://facebook.com',
+};
+
+export async function getSystemSettings(key: string) {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+
+    if (error) {
+      // Graceful fallback if table is not yet migrated
+      console.warn(`getSystemSettings table error for key ${key}:`, error.message);
+      return { success: true, data: key === 'contacts' ? DEFAULT_CONTACTS : {} };
+    }
+
+    if (!data) {
+      return { success: true, data: key === 'contacts' ? DEFAULT_CONTACTS : {} };
+    }
+
+    return { success: true, data: data.value };
+  } catch (error: any) {
+    console.error('getSystemSettings error:', error);
+    return { success: false, error: error.message, data: key === 'contacts' ? DEFAULT_CONTACTS : {} };
+  }
+}
+
+export async function updateSystemSettings(key: string, value: any) {
+  try {
+    const { error } = await supabase
+      .from('system_settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+
+    if (error) throw error;
+    revalidatePath('/');
+    revalidatePath('/admin/config');
+    return { success: true };
+  } catch (error: any) {
+    console.error('updateSystemSettings error:', error);
+    return { success: false, error: error.message };
+  }
+}

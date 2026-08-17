@@ -186,7 +186,7 @@ export default function AdminLayout({
           {/* Row 2: Theme controls — clear, spacious */}
           <div className="flex items-center gap-2 px-1">
             <div className="flex-1">
-              <ThemePicker align="up" />
+              <ThemePicker align="up" menuAlign="left" />
             </div>
             <ThemeToggle />
           </div>
@@ -227,7 +227,10 @@ export default function AdminLayout({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2">
+          <div 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
+            className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+          >
             <div className="p-1 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-lg text-white">
               <GraduationCap className="w-4 h-4" />
             </div>
