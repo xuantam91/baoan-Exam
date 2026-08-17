@@ -1,7 +1,14 @@
 #!/bin/bash
 
+# Check if we are running in AppTranslocation (macOS security sandbox for downloaded files)
+DIR="$(cd "$(dirname "$0")" && pwd)"
+if [[ "$DIR" == *"AppTranslocation"* ]]; then
+    osascript -e 'display dialog "⚠️ Vui lòng di chuyển thư mục dự án ra ngoài thư mục Downloads (ví dụ: kéo thả vào thư mục Applications hoặc Desktop) trước khi mở, để tránh bị macOS hạn chế quyền ghi tệp!" buttons {"Đã hiểu"} default button 1 with icon caution'
+    exit 1
+fi
+
 # Move to the script's directory
-cd "$(dirname "$0")"
+cd "$DIR"
 
 clear
 echo "=========================================================="
