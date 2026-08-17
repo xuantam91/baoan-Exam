@@ -135,6 +135,15 @@ def build_app_bundle():
     # 3. Create macOS executable launcher script
     # It will activate python env, install reqs, and launch streamlit automatically.
     launcher_content = """#!/bin/bash
+# Check if we are running in Terminal
+if [ -z "$TERM" ] || [ "$1" != "--run-internal" ]; then
+    # Get the directory of this script
+    DIR="$(cd "$(dirname "$0")" && pwd)"
+    # Run the script in terminal with parameter
+    osascript -e "tell application \\"Terminal\\" to do script \\"'$DIR/BaoAnExamOffline' --run-internal\\""
+    exit 0
+fi
+
 # Resolve absolute path to the app resource directory
 DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$DIR/../Resources/app"
@@ -155,7 +164,7 @@ fi
 
 # Create virtual environment if missing
 if [ ! -d ".venv" ]; then
-    echo "Đang khởi tạo môi trường ảo Python (.venv)..."
+    echo "Đang khởi tạo môi trường ảo Python (.venv) trong thư mục ứng dụng..."
     python3 -m venv .venv
 fi
 
