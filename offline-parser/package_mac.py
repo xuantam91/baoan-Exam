@@ -177,8 +177,12 @@ fi
 # Activate
 source .venv/bin/activate
 
+# Upgrade pip and package utilities to avoid compiling from source
+echo "[2/3] Đang nâng cấp công cụ cài đặt thư viện (pip, setuptools)..."
+pip install --upgrade pip setuptools wheel
+
 # Install requirements
-echo "[2/3] Đang kiểm tra và tự động cập nhật thư viện phụ thuộc..."
+echo "Đang tải và cập nhật các thư viện phụ thuộc..."
 pip install -r requirements.txt
 
 # Run Streamlit
