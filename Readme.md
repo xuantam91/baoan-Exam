@@ -70,7 +70,7 @@ BaoAn-Exam/
    source .venv/bin/activate  # Trên Windows dùng: .venv\Scripts\activate
    pip install -r requirements.txt
    ```
-3. Tạo file cấu hình `.env` chứa API Key của Gemini và Supabase.
+3. Cấu hình kết nối: Nhập API Key của Gemini và các khóa Supabase trực tiếp trên giao diện Sidebar của ứng dụng, sau đó nhấp vào nút "Lưu cấu hình vĩnh viễn (.env)" để hệ thống tự động ghi lại.
 4. Khởi chạy ứng dụng:
    ```bash
    streamlit run app.py
