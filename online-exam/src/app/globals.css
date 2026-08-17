@@ -1,0 +1,305 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+/* ==========================================================
+   THEME SYSTEM
+   Supported themes: indigo (default), ocean, forest, sunset
+   Applied as: <html class="dark theme-ocean"> etc.
+   ========================================================== */
+
+@layer base {
+
+  /* ── DEFAULT THEME: INDIGO (Education Purple) ─────────── */
+  :root,
+  :root.theme-indigo {
+    --brand-50:   245 82% 96%;
+    --brand-100:  245 82% 91%;
+    --brand-500:  245 82% 60%;
+    --brand-600:  245 82% 52%;
+    --brand-700:  245 82% 44%;
+    --background: 220 25% 93%;
+    --foreground: 220 55% 8%;
+    --card:       0 0% 100%;
+    --card-foreground: 220 55% 8%;
+    --primary:    245 82% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary:  220 18% 86%;
+    --secondary-foreground: 220 45% 15%;
+    --muted:      220 18% 86%;
+    --muted-foreground: 220 18% 32%;
+    --accent:     245 80% 94%;
+    --accent-foreground: 245 82% 30%;
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border:     220 16% 72%;
+    --input:      0 0% 100%;
+    --ring:       245 82% 52%;
+    --radius:     0.5rem;
+  }
+
+  /* ── OCEAN THEME: Sky/Cyan ────────────────────────────── */
+  :root.theme-ocean {
+    --brand-50:   200 90% 94%;
+    --brand-100:  200 90% 87%;
+    --brand-500:  200 90% 45%;
+    --brand-600:  200 90% 37%;
+    --brand-700:  200 90% 30%;
+    --background: 200 28% 93%;
+    --foreground: 200 60% 7%;
+    --primary:    200 90% 37%;
+    --primary-foreground: 0 0% 100%;
+    --ring:       200 90% 37%;
+    --accent:     200 80% 93%;
+    --accent-foreground: 200 80% 25%;
+  }
+
+  /* ── FOREST THEME: Emerald/Green ─────────────────────── */
+  :root.theme-forest {
+    --brand-50:   160 75% 93%;
+    --brand-100:  160 75% 85%;
+    --brand-500:  160 70% 35%;
+    --brand-600:  160 70% 28%;
+    --brand-700:  160 70% 22%;
+    --background: 160 18% 93%;
+    --foreground: 160 55% 6%;
+    --primary:    160 70% 28%;
+    --primary-foreground: 0 0% 100%;
+    --ring:       160 70% 28%;
+    --accent:     160 65% 92%;
+    --accent-foreground: 160 65% 18%;
+  }
+
+  /* ── SUNSET THEME: Amber/Orange ──────────────────────── */
+  :root.theme-sunset {
+    --brand-50:   32 95% 93%;
+    --brand-100:  32 95% 86%;
+    --brand-500:  32 95% 48%;
+    --brand-600:  25 90% 42%;
+    --brand-700:  20 88% 35%;
+    --background: 35 25% 93%;
+    --foreground: 25 60% 8%;
+    --primary:    25 90% 42%;
+    --primary-foreground: 0 0% 100%;
+    --ring:       25 90% 42%;
+    --accent:     32 90% 93%;
+    --accent-foreground: 32 80% 25%;
+  }
+
+  /* ── DARK MODE (shared across all themes) ─────────────── */
+  .dark {
+    --background:        228 39%  7%;
+    --foreground:        214 40% 94%;
+    --card:              228 35% 10%;
+    --card-foreground:   214 40% 94%;
+    --primary:           245 82% 65%;
+    --primary-foreground:228 39%  7%;
+    --secondary:         226 28% 14%;
+    --secondary-foreground: 214 40% 88%;
+    --muted:             226 28% 14%;
+    --muted-foreground:  214 22% 62%;
+    --accent:            226 28% 16%;
+    --accent-foreground: 214 40% 90%;
+    --destructive:       0 62% 38%;
+    --destructive-foreground: 0 0% 100%;
+    --border:            226 28% 20%;
+    --input:             226 28% 14%;
+    --ring:              245 82% 65%;
+  }
+  .dark.theme-ocean  { --primary: 200 90% 55%; --ring: 200 90% 55%; }
+  .dark.theme-forest { --primary: 160 70% 45%; --ring: 160 70% 45%; }
+  .dark.theme-sunset { --primary: 32 95% 58%;  --ring: 32 95% 58%;  }
+}
+
+/* ==========================================================
+   BODY
+   ========================================================== */
+body {
+  background-color: hsl(var(--background));
+  color:            hsl(var(--foreground));
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================================================
+   CARD
+   ========================================================== */
+.card-el {
+  background-color: hsl(var(--card));
+  color:            hsl(var(--card-foreground));
+  border:           1px solid hsl(var(--border));
+  border-radius:    var(--radius);
+}
+html:not(.dark) .card-el {
+  box-shadow: 0 1px 4px 0 rgb(15 29 80 / 0.07), 0 1px 2px -1px rgb(15 29 80 / 0.05);
+}
+.dark .card-el {
+  box-shadow: 0 2px 8px 0 rgb(0 0 0 / 0.4);
+}
+
+/* ==========================================================
+   LIGHT-MODE COMPREHENSIVE OVERRIDES
+   Scoped with html:not(.dark) — never affects dark mode
+   ========================================================== */
+
+/* ── SLATE TEXT ────────────────────────────────────── */
+html:not(.dark) .text-slate-300 { color: #64748B; }
+html:not(.dark) .text-slate-400 { color: #475569; }
+html:not(.dark) .text-slate-500 { color: #334155; }
+html:not(.dark) .text-slate-600 { color: #1E293B; }
+html:not(.dark) .text-slate-700 { color: #0F172A; }
+html:not(.dark) .text-slate-800,
+html:not(.dark) .text-slate-850,
+html:not(.dark) .text-slate-900 { color: #090F1C; }
+
+/* ── SLATE BACKGROUNDS ─────────────────────────────── */
+html:not(.dark) .bg-slate-50   { background-color: #EFF4FB; }
+html:not(.dark) .bg-slate-100  { background-color: #E2EAF4; }
+html:not(.dark) .bg-slate-200  { background-color: #CBD9E8; }
+
+/* Transparent bg-slate variants used in exam cards */
+html:not(.dark) [class*="bg-slate-50/"]  { background-color: #F8FAFD; }
+html:not(.dark) [class*="bg-slate-900/"] { background-color: #F8FAFD; }
+
+/* ── SLATE BORDERS ─────────────────────────────────── */
+html:not(.dark) .border-slate-100 { border-color: #C2D0E0; }
+html:not(.dark) .border-slate-200 { border-color: #AABCCE; }
+html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #C2D0E0; }
+
+/* ── ALL INPUTS & SELECTS ──────────────────────────── */
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #94A3B8 !important;
+}
+html:not(.dark) input:focus,
+html:not(.dark) select:focus,
+html:not(.dark) textarea:focus {
+  border-color: hsl(var(--primary)) !important;
+  outline: 2px solid hsl(var(--primary) / 0.15) !important;
+  outline-offset: 0 !important;
+}
+html:not(.dark) input::placeholder { color: #94A3B8; }
+
+/* ── TABLE ─────────────────────────────────────────── */
+html:not(.dark) thead tr            { background-color: #D8E4F0; }
+html:not(.dark) thead th            { color: #1A2B4A; font-weight: 700; }
+html:not(.dark) tbody tr:nth-child(even) { background-color: #F4F8FD; }
+html:not(.dark) tbody tr:hover      { background-color: #EBF2FA; }
+
+/* ── LABELS ─────────────────────────────────────────── */
+html:not(.dark) label { color: #1E293B; }
+
+/* ==========================================================
+   BADGE / TAG COLOR FIXES — Light Mode
+   Boost all color-tinted backgrounds for max readability
+   ========================================================== */
+
+/* — INDIGO — */
+html:not(.dark) .bg-indigo-50  { background-color: #C7D2FE; }
+html:not(.dark) .bg-indigo-100 { background-color: #A5B4FC; }
+html:not(.dark) .text-indigo-600 { color: #4338CA; }
+html:not(.dark) .text-indigo-700 { color: #3730A3; }
+html:not(.dark) .text-indigo-800 { color: #312E81; }
+
+/* — VIOLET — */
+html:not(.dark) .bg-violet-50  { background-color: #DDD6FE; }
+html:not(.dark) .bg-violet-100 { background-color: #C4B5FD; }
+html:not(.dark) .text-violet-600 { color: #7C3AED; }
+html:not(.dark) .text-violet-700 { color: #6D28D9; }
+html:not(.dark) .text-violet-800 { color: #5B21B6; }
+
+/* — EMERALD — */
+html:not(.dark) .bg-emerald-50  { background-color: #6EE7B7; }
+html:not(.dark) .bg-emerald-100 { background-color: #34D399; }
+html:not(.dark) .text-emerald-600 { color: #059669; }
+html:not(.dark) .text-emerald-700 { color: #047857; }
+html:not(.dark) .text-emerald-800 { color: #065F46; }
+
+/* — AMBER — */
+html:not(.dark) .bg-amber-50  { background-color: #FCD34D; }
+html:not(.dark) .bg-amber-100 { background-color: #FBBF24; }
+html:not(.dark) .text-amber-600 { color: #D97706; }
+html:not(.dark) .text-amber-700 { color: #B45309; }
+html:not(.dark) .text-amber-800 { color: #92400E; }
+
+/* — ROSE — */
+html:not(.dark) .bg-rose-50  { background-color: #FECDD3; }
+html:not(.dark) .bg-rose-100 { background-color: #FDA4AF; }
+html:not(.dark) .text-rose-500 { color: #F43F5E; }
+html:not(.dark) .text-rose-600 { color: #E11D48; }
+html:not(.dark) .text-rose-700 { color: #BE123C; }
+html:not(.dark) .text-rose-800 { color: #9F1239; }
+
+/* — SKY / BLUE — */
+html:not(.dark) .bg-sky-50   { background-color: #BAE6FD; }
+html:not(.dark) .bg-blue-50  { background-color: #BFDBFE; }
+html:not(.dark) .bg-blue-100 { background-color: #93C5FD; }
+html:not(.dark) .text-blue-600 { color: #2563EB; }
+html:not(.dark) .text-blue-700 { color: #1D4ED8; }
+html:not(.dark) .text-blue-800 { color: #1E40AF; }
+
+/* — PINK — */
+html:not(.dark) .bg-pink-50  { background-color: #FBCFE8; }
+html:not(.dark) .bg-pink-100 { background-color: #F9A8D4; }
+html:not(.dark) .text-pink-600 { color: #DB2777; }
+
+/* ==========================================================
+   DARK-MODE SAFETY NET
+   ========================================================== */
+.dark .text-slate-300 { color: #94a3b8; }
+.dark .text-slate-400 { color: #7b8fae; }
+.dark .text-slate-500 { color: #64748b; }
+.dark .text-slate-600 { color: #8898af; }
+.dark .text-slate-700 { color: #94a3b8; }
+.dark .text-slate-800,
+.dark .text-slate-900 { color: #e2e8f0; }
+
+.dark .border-slate-100 { border-color: #1e2c44; }
+.dark .border-slate-200 { border-color: #263348; }
+.dark .bg-slate-50      { background-color: #111829; }
+.dark .bg-slate-100     { background-color: #141c2e; }
+
+.dark thead tr { background-color: #141c2e; }
+.dark thead th { color: #94a3b8; font-weight: 600; }
+
+/* Restore translucent badge backgrounds in dark */
+.dark .bg-indigo-50,
+.dark .bg-indigo-100  { background-color: rgb(79 70 229 / 0.2); }
+.dark .bg-violet-50,
+.dark .bg-violet-100  { background-color: rgb(109 40 217 / 0.2); }
+.dark .bg-emerald-50,
+.dark .bg-emerald-100 { background-color: rgb(5 150 105 / 0.2); }
+.dark .bg-amber-50,
+.dark .bg-amber-100   { background-color: rgb(217 119 6 / 0.2); }
+.dark .bg-rose-50,
+.dark .bg-rose-100    { background-color: rgb(225 29 72 / 0.2); }
+.dark .bg-sky-50,
+.dark .bg-blue-50,
+.dark .bg-blue-100    { background-color: rgb(37 99 235 / 0.2); }
+
+/* ==========================================================
+   SCROLLBAR
+   ========================================================== */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.28);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ==========================================================
+   ANIMATIONS
+   ========================================================== */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.22s ease-out both; }
