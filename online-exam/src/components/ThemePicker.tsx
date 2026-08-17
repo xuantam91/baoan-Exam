@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Palette } from 'lucide-react';
 
 const THEMES = [
   { id: 'indigo', label: 'Tím',       sub: 'Mặc định',   color: '#6366F1' },
@@ -11,7 +12,11 @@ const THEMES = [
 
 type ThemeId = (typeof THEMES)[number]['id'];
 
-export default function ThemePicker() {
+interface ThemePickerProps {
+  align?: 'up' | 'down';
+}
+
+export default function ThemePicker({ align = 'down' }: ThemePickerProps) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<ThemeId>('indigo');
   const [isDark, setIsDark] = useState(false);
@@ -55,23 +60,29 @@ export default function ThemePicker() {
 
   const activeColor = THEMES.find((t) => t.id === current)?.color ?? '#6366F1';
 
+  // Determine dropdown placement
+  const dropdownPlacementClass = align === 'up'
+    ? 'bottom-full mb-2'
+    : 'top-full mt-2';
+
   return (
-    <div className="relative">
+    <div className="relative inline-block text-left">
       {/* Trigger button */}
       <button
         onClick={() => setOpen((v) => !v)}
         title="Đổi màu giao diện"
         aria-label="Chọn theme màu sắc"
-        className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-colors hover:opacity-80"
+        className="h-9 px-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:opacity-85 active:scale-95 flex-shrink-0"
         style={{
           backgroundColor: 'hsl(var(--accent))',
           border: '1px solid hsl(var(--border))',
         }}
       >
         <div
-          className="w-4 h-4 rounded-full shadow-sm"
+          className="w-3.5 h-3.5 rounded-full shadow-sm flex-shrink-0"
           style={{ backgroundColor: activeColor }}
         />
+        <Palette className="w-4 h-4 text-slate-500 dark:text-slate-400" />
       </button>
 
       {/* Dropdown */}
@@ -79,7 +90,7 @@ export default function ThemePicker() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 bottom-full mb-2 z-50 rounded-xl shadow-2xl p-2 w-48 animate-fade-in"
+            className={`absolute right-0 z-50 rounded-xl shadow-2xl p-2 w-48 animate-fade-in ${dropdownPlacementClass}`}
             style={{
               backgroundColor: 'hsl(var(--card))',
               border: '1px solid hsl(var(--border))',

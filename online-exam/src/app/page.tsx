@@ -242,7 +242,7 @@ export default function Home() {
                 Đăng Nhập
               </a>
             )}
-            <ThemePicker />
+            <ThemePicker align="down" />
             <ThemeToggle />
           </div>
         </div>

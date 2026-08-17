@@ -186,7 +186,7 @@ export default function AdminLayout({
           {/* Row 2: Theme controls — clear, spacious */}
           <div className="flex items-center gap-2 px-1">
             <div className="flex-1">
-              <ThemePicker />
+              <ThemePicker align="up" />
             </div>
             <ThemeToggle />
           </div>
