@@ -1,8 +1,12 @@
 @echo off
 title BaoAn Exam - Offline Parser
 echo ==========================================================
-echo       KHOI DONG HE THONG TAO DE THI OFFLINE BAOAN
+echo    UNG DUNG BOC TACH DE THI OFFLINE BAOAN DANG KHOI DONG
 echo ==========================================================
+echo.
+echo ^>^> Vui long GIU NGUYEN cua so nay va DOI
+echo    cho den khi trang web tu dong mo ra tren trinh duyet.
+echo ----------------------------------------------------------
 echo.
 
 :: Move to the directory of the batch file
@@ -28,25 +32,22 @@ if not exist ".venv" (
         pause
         exit /b
       )
+) else (
+    echo [1/3] Da kiem tra moi truong ao Python (.venv).
 )
 
 :: Activate virtual environment
-echo [2/3] Dang kich hoat moi truong ao (.venv)...
 call .venv\Scripts\activate
 
 :: Install/Upgrade dependencies
-echo [3/3] Dang kiem tra va tu dong cai dat cac thu vien...
-python -m pip install --upgrade pip
+echo [2/3] Dang kiem tra va tu dong cap nhat cac thu vien phu thuoc...
 pip install -r requirements.txt
-if %errorlevel% neq 0 (
-    echo [WARNING] Co loi xay ra khi cai dat thu vien. Dang thu lai...
-    pip install -r requirements.txt
-)
 
 :: Launch Streamlit app
+echo [3/3] Dang ket noi AI ^& Khoi chay may chu...
 echo.
 echo ==========================================================
-echo [THANH CONG] Dang khoi chay ung dung tren trinh duyet...
+echo [THANH CONG] Dang mo trinh duyet cua ban...
 echo ==========================================================
 streamlit run app.py
 

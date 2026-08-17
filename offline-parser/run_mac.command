@@ -5,8 +5,12 @@ cd "$(dirname "$0")"
 
 clear
 echo "=========================================================="
-echo "      KHỞI ĐỘNG HỆ THỐNG TẠO ĐỀ THI OFFLINE BAOAN"
+echo "   ỨNG DỤNG BÓC TÁCH ĐỀ THI OFFLINE BAOAN ĐANG KHỞI ĐỘNG"
 echo "=========================================================="
+echo ""
+echo ">>> Vui lòng GIỮ NGUYÊN cửa sổ này và ĐỢI"
+echo "    cho đến khi trang web tự động mở ra trên trình duyệt."
+echo "----------------------------------------------------------"
 echo ""
 
 # Check if Python3 is installed
@@ -23,28 +27,25 @@ if [ ! -d ".venv" ]; then
     echo "[1/3] Đang tạo môi trường ảo Python (.venv)..."
     python3 -m venv .venv
     if [ $? -ne 0 ]; then
-        echo "[ERROR] Không thể khởi tạo .venv! Thử cài đặt python3-venv nếu dùng Linux."
+        echo "[ERROR] Không thể khởi tạo .venv!"
         read -p "Nhấn Enter để thoát..."
         exit 1
     fi
+else
+    echo "[1/3] Đã kiểm tra môi trường ảo Python (.venv)."
 fi
 
 # Activate virtual environment
-echo "[2/3] Đang kích hoạt môi trường ảo (.venv)..."
 source .venv/bin/activate
 
 # Install/Upgrade dependencies
-echo "[3/3] Đang kiểm tra và tự động cài đặt các thư viện..."
-python3 -m pip install --upgrade pip
+echo "[2/3] Đang kiểm tra và tự động cập nhật các thư viện phụ thuộc..."
 pip install -r requirements.txt
-if [ $? -ne 0 ]; then
-    echo "[WARNING] Có lỗi xảy ra khi cài đặt thư viện. Đang thử lại..."
-    pip install -r requirements.txt
-fi
 
 # Launch Streamlit app
+echo "[3/3] Đang kết nối AI & Khởi chạy máy chủ..."
 echo ""
 echo "=========================================================="
-echo "[THÀNH CÔNG] Đang khởi chạy ứng dụng trên trình duyệt..."
+echo "[THÀNH CÔNG] Đang mở trình duyệt của bạn..."
 echo "=========================================================="
 streamlit run app.py

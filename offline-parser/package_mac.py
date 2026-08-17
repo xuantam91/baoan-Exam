@@ -152,8 +152,12 @@ cd "$APP_DIR"
 
 clear
 echo "=========================================================="
-echo "      KHỞI ĐỘNG HỆ THỐNG TẠO ĐỀ THI OFFLINE BAOAN"
+echo "   ỨNG DỤNG BÓC TÁCH ĐỀ THI OFFLINE BAOAN ĐANG KHỞI ĐỘNG"
 echo "=========================================================="
+echo ""
+echo ">>> Vui lòng GIỮ NGUYÊN cửa sổ này và ĐỢI"
+echo "    cho đến khi trang web tự động mở ra trên trình duyệt."
+echo "----------------------------------------------------------"
 echo ""
 
 # Check python3
@@ -164,19 +168,25 @@ fi
 
 # Create virtual environment if missing
 if [ ! -d ".venv" ]; then
-    echo "Đang khởi tạo môi trường ảo Python (.venv) trong thư mục ứng dụng..."
+    echo "[1/3] Đang khởi tạo môi trường ảo Python (.venv) trong thư mục..."
     python3 -m venv .venv
+else
+    echo "[1/3] Đã kiểm tra môi trường ảo Python (.venv)."
 fi
 
 # Activate
 source .venv/bin/activate
 
 # Install requirements
-echo "Đang kiểm tra và cài đặt các thư viện phụ thuộc..."
+echo "[2/3] Đang kiểm tra và tự động cập nhật thư viện phụ thuộc..."
 pip install -r requirements.txt
 
 # Run Streamlit
-echo "Đang khởi chạy ứng dụng offline..."
+echo "[3/3] Đang kết nối AI & Khởi chạy máy chủ..."
+echo ""
+echo "=========================================================="
+echo "[THÀNH CÔNG] Đang mở trình duyệt của bạn..."
+echo "=========================================================="
 streamlit run app.py
 """
     launcher_path = os.path.join(macos_dir, "BaoAnExamOffline")

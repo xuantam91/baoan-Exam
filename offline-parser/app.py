@@ -136,6 +136,10 @@ if "gemini_accounts" not in st.session_state:
 if "active_account_idx" not in st.session_state:
     st.session_state.active_account_idx = 0
 
+if "has_shown_welcome_toast" not in st.session_state:
+    st.session_state.has_shown_welcome_toast = True
+    st.toast("⚡ Đã khởi động hệ thống offline BaoAn Exam thành công!", icon="🚀")
+
 # Sidebar Configuration
 st.sidebar.title("⚙️ Cấu HÌnh Hệ Thốnɡ")
 
@@ -287,6 +291,13 @@ with st.sidebar.expander("📊 Thống kê tài nguyên", expanded=False):
 if st.sidebar.button("🔄 Làm mới dữ liệu danh mục", use_container_width=True):
     fetch_metadata()
     st.rerun()
+
+st.sidebar.markdown("---")
+if st.sidebar.button("🔴 Tắt ứng dụng (Đóng Server)", use_container_width=True, type="primary"):
+    st.sidebar.info("Đang dừng ứng dụng... Bạn có thể đóng tab này.")
+    import os
+    import signal
+    os.kill(os.getpid(), signal.SIGINT)
 
 # Form to quickly add subjects/classes if database is empty
 with st.sidebar.expander("➕ Thêm nhanh Môn / Lớp", expanded=False):
