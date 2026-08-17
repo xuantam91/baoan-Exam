@@ -6,6 +6,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import ThemePicker from '@/components/ThemePicker';
 import Logo from '@/components/Logo';
 import LanguagePicker from '@/components/LanguagePicker';
+import TechBackground from '@/components/TechBackground';
 import { translations, Language } from '@/lib/translations';
 import { getCurrentUser } from '@/app/actions/auth';
 import {
@@ -413,11 +414,7 @@ export default function Home() {
           HERO
           ═══════════════════════════════════════════════════ */}
       <section className="relative overflow-hidden">
-        {/* Pastel gradient backdrop */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-indigo-200/40 via-violet-200/30 to-transparent dark:from-indigo-950/30 dark:via-violet-950/20 blur-3xl" />
-          <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-gradient-to-tl from-pink-200/30 via-amber-100/20 to-transparent dark:from-pink-950/20 dark:via-amber-950/10 blur-3xl" />
-        </div>
+        <TechBackground />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 lg:pt-28 lg:pb-32">
           <div className="text-center max-w-4xl mx-auto">
