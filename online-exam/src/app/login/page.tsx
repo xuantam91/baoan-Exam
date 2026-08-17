@@ -41,6 +41,7 @@ export default function LoginPage() {
   const [role, setRole] = useState<'admin' | 'teacher' | 'student' | 'parent'>('student');
   const [classId, setClassId] = useState('');
   const [studentId, setStudentId] = useState('');
+  const [roleCode, setRoleCode] = useState('');
 
   // Dropdown lists
   const [classesList, setClassesList] = useState<any[]>([]);
@@ -87,6 +88,12 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
+
+      if ((role === 'admin' || role === 'teacher') && !roleCode.trim()) {
+        setError('Vui lòng nhập mã bảo mật xác thực vai trò.');
+        setLoading(false);
+        return;
+      }
       
       const payload = {
         email,
@@ -94,7 +101,8 @@ export default function LoginPage() {
         name,
         role,
         classId: role === 'student' ? classId : null,
-        studentId: role === 'parent' ? studentId : null
+        studentId: role === 'parent' ? studentId : null,
+        roleCode: (role === 'admin' || role === 'teacher') ? roleCode : null
       };
 
       const res = await signUp(payload);
@@ -370,8 +378,30 @@ export default function LoginPage() {
                       <option key={s.id} value={s.id}>{s.name} ({s.email})</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* Role Security Code for Teacher / Admin */}
+              {(role === 'admin' || role === 'teacher') && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Mã bảo mật xác thực vai trò
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Nhập mã bảo mật vai trò..."
+                    value={roleCode}
+                    onChange={(e) => setRoleCode(e.target.value)}
+                    required
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    style={{
+                      backgroundColor: 'hsl(var(--background))',
+                      borderColor: 'hsl(var(--border))',
+                      color: 'hsl(var(--foreground))',
+                    }}
+                  />
                   <p className="text-[10px] text-slate-400 italic">
-                    * Lựa chọn này giúp phụ huynh có thể theo dõi bảng điểm học tập của con.
+                    * Yêu cầu để đăng ký vai trò Admin hoặc Giáo viên. Liên hệ ban quản trị để nhận mã.
                   </p>
                 </div>
               )}

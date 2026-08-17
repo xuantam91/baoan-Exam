@@ -46,6 +46,20 @@ export async function signUp(formData: any) {
     const role = formData.role || 'student';
     const classId = formData.classId || null;
     const studentId = formData.studentId || null;
+    const roleCode = formData.roleCode || '';
+
+    // Server-side security check for admin/teacher registration keys
+    if (role === 'admin') {
+      const adminKey = process.env.ADMIN_REGISTRATION_KEY || 'BaoAnAdmin2026';
+      if (roleCode !== adminKey) {
+        return { success: false, error: 'Mã bảo mật xác thực vai trò Admin không chính xác!' };
+      }
+    } else if (role === 'teacher') {
+      const teacherKey = process.env.TEACHER_REGISTRATION_KEY || 'BaoAnTeacher2026';
+      if (roleCode !== teacherKey) {
+        return { success: false, error: 'Mã bảo mật xác thực vai trò Giáo viên không chính xác!' };
+      }
+    }
 
     // Get origin dynamically from headers
     const headersList = await headers();
