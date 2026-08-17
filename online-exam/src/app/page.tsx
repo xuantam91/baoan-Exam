@@ -50,8 +50,18 @@ function useTypingEffect(texts: string[], speed = 70, pause = 2200) {
   const [charIdx, setCharIdx] = useState(0);
   const [deleting, setDeleting] = useState(false);
 
+  // Reset index and typing progress when text list changes (e.g. language changed)
+  const textsKey = texts.join('|||');
+  useEffect(() => {
+    setIdx(0);
+    setCharIdx(0);
+    setDeleting(false);
+    setDisplay('');
+  }, [textsKey]);
+
   useEffect(() => {
     const current = texts[idx];
+    if (!current) return;
     let timer: ReturnType<typeof setTimeout>;
 
     if (!deleting && charIdx < current.length) {
@@ -183,8 +193,15 @@ export default function Home() {
     return '/login';
   };
 
+  const typingTexts = {
+    vi: ['Thi Trắc Nghiệm Thông Minh', 'Chấm Điểm Tự Động AI', 'Số Hóa Giáo Dục Toàn Diện', 'Quản Lý Lớp Học 4.0'],
+    en: ['Smart Online Exams', 'AI Automated Grading', 'Full Education Digitization', 'Class Management 4.0'],
+    la: ['ການສອບເສັງອອນລາຍອັດສະລິຍະ', 'ກວດຄະແນນອັດຕະໂນມັດດ້ວຍ AI', 'ຫັນການສຶກສາເປັນດິຈິຕອນ', 'ການຈັດການຫ້ອງຮຽນ 4.0'],
+    zh: ['智能在线考试系统', 'AI 自动阅卷批改', '全方位数字化教学', '班级教务管理 4.0'],
+  };
+
   const typedText = useTypingEffect(
-    ['Thi Trắc Nghiệm Thông Minh', 'Chấm Điểm Tự Động AI', 'Số Hóa Giáo Dục Toàn Diện', 'Quản Lý Lớp Học 4.0'],
+    typingTexts[lang] || typingTexts.vi,
     65,
     2000
   );
