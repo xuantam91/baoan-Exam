@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="favicon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#A78BFA" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="32" height="32" rx="8" fill="url(#favicon-gradient)" />
+  <!-- Simple Graduation Cap Shape for high visibility -->
+  <path d="M16 6 L27 11 L16 16 L5 11 Z" fill="#ffffff" />
+  <path d="M9 13.5 V17.5 C9 19 11.5 20.2 16 20.2 C20.5 20.2 23 19 23 17.5 V13.5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" fill="none" />
+  <!-- AI Sparkle node -->
+  <path d="M22 6.5 C22 5.5 22.5 5.5 22.5 4.5 C22.5 5.5 23 5.5 23 6.5 C23 7.5 22.5 7.5 22.5 8.5 C22.5 7.5 22 7.5 22 6.5 Z" fill="#F59E0B" />
+</svg>
