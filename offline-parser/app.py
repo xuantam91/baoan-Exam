@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import json
+import time
 import mimetypes
 import io
 import base64
@@ -206,6 +207,39 @@ with st.sidebar.expander("🔑 Cấu hình kết nối Gemini AI & Database", ex
         value=os.getenv("SUPABASE_KEY", ""), 
         type="password"
     )
+
+    # Save Configuration to .env button
+    st.markdown("<br/>", unsafe_allow_html=True)
+    if st.button("💾 Lưu cấu hình vĩnh viễn (.env)", use_container_width=True):
+        active_gemini_key = ""
+        if st.session_state.gemini_accounts:
+            active_gemini_key = st.session_state.gemini_accounts[st.session_state.active_account_idx]["key"]
+        
+        try:
+            env_content = f"""# Gemini API Settings
+GEMINI_API_KEY={active_gemini_key}
+
+# Supabase Database Settings
+SUPABASE_URL={supabase_url}
+SUPABASE_KEY={supabase_key}
+"""
+            with open(".env", "w", encoding="utf-8") as f:
+                f.write(env_content)
+                
+            # Apply immediately to memory
+            os.environ["GEMINI_API_KEY"] = active_gemini_key
+            os.environ["SUPABASE_URL"] = supabase_url
+            os.environ["SUPABASE_KEY"] = supabase_key
+            
+            # Reload dotenv values
+            load_dotenv(override=True)
+            
+            st.success("Đã lưu cấu hình vào .env thành công!")
+            st.toast("Đã lưu .env!", icon="💾")
+            time.sleep(1)
+            st.rerun()
+        except Exception as e:
+            st.error(f"Lỗi ghi tệp .env: {e}")
 
 # Google Drive Configuration (Optional)
 with st.sidebar.expander("📁 Tùy chọn Google Drive (Dự phòng)", expanded=False):
