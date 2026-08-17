@@ -1,72 +1,125 @@
+# Hệ Thống Quản Lý & Thi Trắc Nghiệm BaoAn Exam
 
-Mảnh ghép 1: Prompt tạo App Offline Bóc tách Đề (Chạy bằng Python)
-Bạn là chuyên gia lập trình Python, Streamlit và Google Gemini AI.
-Nhiệm vụ của bạn là viết một ứng dụng Desktop nội bộ (Local Web App) dùng Streamlit để giúp tôi tự động hóa việc bóc tách câu hỏi từ file đề thi và đẩy lên database Supabase.
+Hệ thống **BaoAn Exam** là giải pháp số hóa giáo dục toàn diện tích hợp Trí tuệ nhân tạo (AI), bao gồm hai cấu phần chính hoạt động độc lập nhưng đồng bộ hóa dữ liệu thông qua cơ sở dữ liệu Supabase:
 
-### 1. CÔNG NGHỆ VÀ THƯ VIỆN
-- Ngôn ngữ: Python 3.10+
-- Giao diện: Streamlit
-- AI: Thư viện `google-genai` (sử dụng model `gemini-1.5-pro` hoặc `gemini-1.5-flash`). Hỗ trợ upload file PDF/Ảnh.
-- Database: `supabase-py`
+1. **Web App Online (`online-exam/`)**: Nền tảng học tập trực tuyến dành cho Giáo viên, Học sinh và Quản trị viên (chạy trên Next.js 14 App Router, triển khai trực tiếp lên Vercel).
+2. **Offline Parser App (`offline-parser/`)**: Công cụ bóc tách đề thi offline bằng AI chạy trên môi trường local (Streamlit + Gemini AI) giúp giáo viên trích xuất câu hỏi từ file Word/PDF và tải lên ngân hàng câu hỏi.
 
-### 2. CẤU TRÚC DATABASE (SUPABASE) SẼ TƯƠNG TÁC
-Bạn cần kết nối đến Supabase và tương tác với các bảng sau:
-- `subjects`: id, name
-- `classes`: id, name, grade
-- `questions`: id, subject_id, grade, content, options (jsonb), correct_answer, explanation, difficulty.
+---
 
-### 3. LUỒNG HOẠT ĐỘNG CỦA ỨNG DỤNG (UI/UX)
-1. **Sidebar:** 
-   - Form nhập API Key (Gemini API, Supabase URL, Supabase Key) hoặc load từ file `.env`.
-   - Nút "Tải dữ liệu danh mục": Lấy danh sách Môn học (từ `subjects`) và Lớp (từ `classes`) để đưa vào các Dropdown list chọn cấu hình.
-2. **Khu vực Xử lý (Main Area):**
-   - Chọn Lớp (Grade) và Môn học (Subject) cho file chuẩn bị tải lên.
-   - Cho phép upload file PDF hoặc Ảnh chụp.
-   - Nút "Bóc tách AI": Khi bấm, gửi file lên Gemini kèm System Prompt ép kiểu trả về JSON Array (gồm: content, options (A/B/C/D), correct_answer, explanation, difficulty). Chú ý yêu cầu AI giữ nguyên mã LaTeX cho các công thức.
-3. **Khu vực Kiểm duyệt (Human-in-the-loop):**
-   - Đọc JSON trả về và hiển thị thành các form chỉnh sửa trực tiếp trên giao diện Streamlit (dùng st.text_area cho nội dung, st.selectbox cho đáp án).
-4. **Đồng bộ Database:**
-   - Nút "Đẩy lên Hệ thống": Duyệt qua danh sách câu hỏi đã được sửa chữa, dùng Supabase client thực hiện Insert vào bảng `questions` kèm `subject_id` và `grade` tương ứng.
+## 📂 Cấu trúc dự án
+```text
+BaoAn-Exam/
+├── online-exam/          # Source code Next.js (Web Online)
+│   ├── src/app/          # Pages & Server Actions
+│   ├── src/components/   # Logo, LanguagePicker, ThemePicker, ContactBubble...
+│   └── .env.local        # File cấu hình môi trường của Web App
+├── offline-parser/       # Source code Streamlit (Bóc tách đề Offline)
+│   ├── app.py            # Ứng dụng Streamlit chính
+│   ├── run_mac.command   # Trình chạy tự động click-to-run dành cho macOS
+│   ├── run_windows.bat   # Trình chạy tự động click-to-run dành cho Windows
+│   └── .env              # File cấu hình API Key & Database của app offline
+└── Readme.md             # Hướng dẫn vận hành này
+```
 
-Hãy cung cấp cho tôi: File `requirements.txt` và mã nguồn chi tiết cho `app.py`.
+---
 
-Mảnh ghép 2: Prompt tạo Web App Online (Deploy lên Vercel)
-Bạn là một chuyên gia Full-stack Developer (Next.js 14 App Router, TypeScript, Tailwind CSS, Supabase).
-Nhiệm vụ của bạn là xây dựng nền tảng Web Thi Trắc Nghiệm Trực Tuyến dành cho giáo viên và học sinh, ĐƯỢC THIẾT KẾ ĐỂ DEPLOY LÊN VERCEL.
-(Lưu ý: Không code tính năng dùng AI bóc tách đề vì đã có app nội bộ đảm nhiệm).
+## 🛠️ Hướng dẫn vận hành cục bộ (Local Development)
 
-### 1. CẤU TRÚC DATABASE BẮT BUỘC (DÙNG SUPABASE)
-Bạn cần tạo các model/type và viết Server Actions tương tác với các bảng sau:
-1. `subjects`: id, name (VD: Toán, Lý, Hóa), description.
-2. `classes`: id, name (VD: 10A1, 11B), grade.
-3. `students`: id, name, email, phone, class_id (Foreign Key -> classes.id).
-4. `questions`: id, subject_id, grade, content, options (jsonb), correct_answer, explanation, difficulty.
-5. `exams`: id (uuid), title, subject_id, class_id (nullable nếu là đề thi chung), duration_minutes, question_ids (mảng id câu hỏi lấy từ bảng questions), created_at.
-6. `submissions`: id, exam_id, student_id, answers (jsonb - đáp án học sinh chọn), score, correct_count, submitted_at.
+### 1. Cấu phần 1: Web App Online (Next.js)
 
-### 2. TÍNH NĂNG DÀNH CHO GIÁO VIÊN (ADMIN DASHBOARD)
-Xây dựng giao diện quản trị có Sidebar điều hướng:
-- **Quản lý Cấu hình:** 
-  - CRUD (Thêm/Sửa/Xóa) danh sách Môn học và Lớp học.
-  - Quản lý Học sinh: Thêm học sinh vào từng Lớp (hỗ trợ nhập form tay, lý tưởng nhất là có tính năng import file CSV/Excel).
-- **Quản lý Đề thi:**
-  - Khởi tạo đề mới: Giáo viên nhập Tên bài thi, chọn Lớp, chọn Môn, nhập Số lượng câu hỏi và Thời gian làm bài. Server tự động query random N câu hỏi từ bảng `questions` theo đúng môn/lớp và lưu thành 1 bản ghi vào `exams`.
-  - Phân phối đề: Mỗi đề thi có 1 URL tĩnh (VD: `/exam/[exam_id]`) kèm nút "Copy Link" để dán qua Zalo.
-  - Gửi Email tự động: Nút "Gửi đề cho lớp" -> Hệ thống truy xuất danh sách email học sinh trong Lớp đó và dùng API Email (Nodemailer hoặc Resend) gửi hàng loạt link làm bài.
-- **Thống kê điểm:** Giao diện xem danh sách học sinh đã nộp bài, điểm số, và xem chi tiết câu đúng/sai của từng bài nộp.
+#### Yêu cầu hệ thống:
+* Đã cài đặt **Node.js (phiên bản 18+)** và **npm**.
 
-### 3. TÍNH NĂNG DÀNH CHO HỌC SINH (GIAO DIỆN LÀM BÀI - MOBILE FRIENDLY)
-- **Trang thi `/exam/[exam_id]`:**
-  - Cổng xác thực: Học sinh chỉ cần nhập Email hoặc Số điện thoại. Hệ thống kiểm tra trong bảng `students`, nếu khớp thì cho phép vào thi và hiển thị "Xin chào [Tên học sinh]".
-  - Giao diện làm bài: Có đồng hồ đếm ngược (Countdown Timer). Hiển thị các câu hỏi dạng Radio button. BẮT BUỘC dùng thư viện `react-katex` để render các công thức Toán học.
-  - Xử lý nộp bài: Tự động submit khi hết giờ hoặc bấm nộp. 
-- **Chấm điểm (Server-side logic):**
-  - Tính số câu đúng, tính điểm (thang 10), lưu kết quả vào `submissions`.
-  - Ngay lập tức gọi API gửi email báo điểm chi tiết (Điểm, số câu đúng/sai) về email của học sinh đó.
+#### Các bước thiết lập và khởi chạy:
+1. Di chuyển vào thư mục dự án Next.js:
+   ```bash
+   cd online-exam
+   ```
+2. Cài đặt các thư viện cần thiết:
+   ```bash
+   npm install
+   ```
+3. Tạo file cấu hình môi trường `.env.local` từ file `.env.example` và điền thông số kết nối:
+   * `NEXT_PUBLIC_SUPABASE_URL`: Đường dẫn API Supabase.
+   * `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Mã khóa public anon của Supabase.
+   * `SUPABASE_SERVICE_ROLE_KEY`: Mã Service Role kết nối admin Supabase.
+   * `RESEND_API_KEY`: API gửi mail tự động từ Resend (hoặc cấu hình SMTP Mailer).
+   * `GEMINI_API_KEY`: API Key của Google Gemini AI để hỗ trợ chấm tự luận.
+4. Chạy server phát triển (Local Development Server):
+   ```bash
+   npm run dev
+   ```
+   * Mở trình duyệt truy cập: `http://localhost:3000`
 
-### 4. TỐI ƯU HÓA DEPLOY LÊN VERCEL
-1. Tạo file `.env.example` liệt kê đầy đủ các biến môi trường (Supabase keys, Email SMTP/API keys).
-2. Tối ưu Server Actions để xử lý logic nhanh gọn, tránh lỗi timeout của Vercel.
-3. Viết một file `README.md` ngắn gọn hướng dẫn 3 bước deploy source code này lên Vercel.
+---
 
-Hãy cung cấp cấu trúc thư mục và mã nguồn chi tiết cho các trang (Pages) và các Server Actions.
+### 2. Cấu phần 2: Mảnh ghép bóc tách đề thi Offline (Streamlit)
+
+#### Yêu cầu hệ thống:
+* Đã cài đặt **Python 3.10 trở lên** trên máy.
+
+#### Cách chạy thông thường:
+1. Di chuyển vào thư mục:
+   ```bash
+   cd offline-parser
+   ```
+2. Tạo môi trường ảo và cài đặt thư viện:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate  # Trên Windows dùng: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+3. Tạo file cấu hình `.env` chứa API Key của Gemini và Supabase.
+4. Khởi chạy ứng dụng:
+   ```bash
+   streamlit run app.py
+   ```
+   * Mở trình duyệt truy cập: `http://localhost:8501`
+
+---
+
+## 📦 Đóng gói & Phân phối App Offline cho Mac & Windows (Portable Pack)
+
+Để chia sẻ công cụ bóc tách đề offline sang máy tính của giáo viên khác **mà không yêu cầu họ phải biết lập trình hay tự gõ lệnh**, thư mục `offline-parser` đã được tích hợp sẵn các trình chạy tự động 1-click (Portable Runners):
+
+### 🖥️ Hướng dẫn cho người dùng Windows:
+1. Copy toàn bộ thư mục `offline-parser` (bao gồm code, `.env`, và file `run_windows.bat`) sang máy Windows cần sử dụng.
+2. Đảm bảo máy tính đó đã cài đặt Python.
+3. Kích đúp chuột (Double click) vào file **`run_windows.bat`**.
+4. Script sẽ tự động:
+   * Khởi tạo môi trường ảo Python cô lập `.venv` cục bộ bên trong thư mục.
+   * Cài đặt tự động các thư viện trong `requirements.txt` vào môi trường ảo.
+   * Khởi chạy server và tự động mở giao diện bóc tách đề thi trên trình duyệt.
+
+### 🍎 Hướng dẫn cho người dùng macOS:
+1. Copy toàn bộ thư mục `offline-parser` sang máy Mac cần sử dụng.
+2. Kích đúp chuột (Double click) vào file **`run_mac.command`**.
+3. Script sẽ tự động thiết lập môi trường ảo, cài đặt thư viện và khởi chạy Streamlit lên trình duyệt Safari/Chrome.
+*(Lưu ý: Nếu macOS báo lỗi bảo mật không chạy được file .command, mở Terminal gõ `chmod +x run_mac.command` là có thể kích đúp chạy bình thường).*
+
+---
+
+## 🚀 Quy trình đồng bộ Git & Deploy lên Vercel
+
+### 1. Đồng bộ mã nguồn lên GitHub
+Khi bạn thực hiện thay đổi và muốn đẩy mã nguồn lên GitHub, sử dụng các lệnh chuẩn sau:
+```bash
+# Xem trạng thái thay đổi
+git status
+
+# Thêm tất cả thay đổi vào hàng đợi commit
+git add .
+
+# Ghi nhận thay đổi kèm mô tả
+git commit -m "feat: mô tả chi tiết các cập nhật mới"
+
+# Đẩy code lên nhánh chính
+git push origin main
+```
+
+### 2. Triển khai Vercel tự động (Auto-Deployment)
+* Dự án Next.js (`online-exam`) đã được liên kết với nền tảng Vercel.
+* **Mỗi khi bạn đẩy mã nguồn lên GitHub bằng lệnh `git push origin main`, Vercel sẽ tự động phát hiện, tải mã nguồn mới và tiến hành biên dịch (build), triển khai (deploy) lại trang web trong vòng 1-2 phút.**
+* Bạn không cần thực hiện thêm bất cứ thao tác deploy thủ công nào trên Vercel. Chỉ cần kiểm tra trạng thái Build thành công trên trang quản trị Vercel Dashboard của bạn.
+* Đảm bảo đã khai báo đầy đủ các biến môi trường tại mục **Settings -> Environment Variables** trên trang quản trị Vercel trùng khớp với các khóa trong file `.env.local`.
