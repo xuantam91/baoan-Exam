@@ -6,73 +6,168 @@ Tài liệu này đề xuất phương án **Tích hợp đồng bộ theo Bộ/
 
 ## 1. Sơ Đồ Lưu Trình Hệ Thống Tối Ưu Theo Bộ (Batch-Based Flowchart)
 
-Mọi câu hỏi tự động sinh ra đều được quản lý theo nhóm (Lượt tạo/Bộ câu hỏi nháp) từ lúc AI tạo ra cho đến khi giáo viên phê duyệt:
+Mọi câu hỏi tự động sinh ra đều được quản lý theo nhóm (Lượt tạo/Bộ câu hỏi nháp) từ lúc AI tạo ra cho đến khi giáo viên phê duyệt thông qua cơ chế xử lý bất đồng bộ (Asynchronous Flow) kết hợp cập nhật thời gian thực (Realtime Update) để chống timeout:
+
+### 1.1. Sơ Đồ Khối Hệ Thống Tổng Thể (Overall System Flowchart)
 
 ```mermaid
 flowchart TD
     %% Định nghĩa các lớp màu sắc (Styling classes)
-    classDef manual fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0369A1;
-    classDef auto fill:#FEE2E2,stroke:#DC2626,stroke-width:2px,color:#991B1B;
-    classDef central fill:#ECFDF5,stroke:#059669,stroke-width:2px,color:#065F46;
-    classDef student fill:#F5F3FF,stroke:#7C3AED,stroke-width:2px,color:#5B21B6;
+    classDef client fill:#E0F2FE,stroke:#0284C7,stroke-width:1.5px,color:#0369A1;
+    classDef server fill:#FFF7ED,stroke:#EA580C,stroke-width:1.5px,color:#9A3412;
+    classDef ai fill:#FEE2E2,stroke:#DC2626,stroke-width:1.5px,color:#991B1B;
+    classDef db fill:#ECFDF5,stroke:#059669,stroke-width:1.5px,color:#065F46;
+    classDef student fill:#F5F3FF,stroke:#7C3AED,stroke-width:1.5px,color:#5B21B6;
+
+    %% Định nghĩa các Node để tránh lỗi cú pháp
+    UserM([Giáo Viên / Admin])
+    Streamlit["🐍 Streamlit Desktop App"]
+    
+    UserA([Giáo Viên / Admin])
+    WebUI["🖥️ Giao diện Admin Web (Next.js)"]
+    NextServer["⚙️ Next.js Server Action"]
+    DB_Batch["💾 public.question_batches (status = processing)"]
+    BgJob["⚙️ Background Job / Route Handler"]
+    GeminiA["🤖 Google Gemini API"]
+    DB_Success["💾 public.questions (status = draft) <br/> public.question_batches (status = pending)"]
+    DB_Fail["💾 public.question_batches (status = failed)"]
+    
+    ReviewUI["🖥️ Giao diện Duyệt Chi Tiết"]
+    DB_Approve["💾 DB Transaction: <br/> Chuyển status = approved <br/> cho Batch & Questions"]
+    DB_Reject["🗑️ DB DELETE: <br/> Xóa Batch (Cascade xóa questions)"]
+    
+    ExamGen["⚙️ Next.js Sinh đề thi"]
+    Student([👥 Học Sinh])
 
     %% =============================================
-    %% LUỒNG THỦ CÔNG
+    %% LUỒNG 1: TẠO THỦ CÔNG (Streamlit Desktop App)
     %% =============================================
-    subgraph Flow1 ["LUỒNG 1: TẠO THỦ CÔNG (Streamlit Desktop App)"]
-        UserM([Giáo Viên / Admin]) -->|Upload Đề/Ảnh| Streamlit["Streamlit App Cục Bộ"]
-        Streamlit -->|Duyệt & sửa tại chỗ| ReviewM["Giao diện Streamlit"]
-        ReviewM -->|Lưu trực tiếp| DB_SaveApproved["Lưu vào Supabase (status = 'approved', batch_id = null)"]
+    subgraph FlowManual ["1. LUỒNG TẠO THỦ CÔNG (Streamlit Desktop App)"]
+        UserM -->|Upload Đề & Chỉnh sửa trực tiếp| Streamlit
+        Streamlit -->|Lưu trực tiếp approved, batch_id = null| DB_Approve
     end
-    class Flow1,UserM,Streamlit,ReviewM,DB_SaveApproved manual;
 
     %% =============================================
-    %% LUỒNG TỰ ĐỘNG THEO LƯỢT (BATCH)
+    %% LUỒNG 2: TỰ ĐỘNG QUA WEB UI (Next.js + Gemini API)
     %% =============================================
-    subgraph Flow2 ["LUỒNG 2: TỰ ĐỘNG THEO BỘ (WebApp Exam UI)"]
-        UserA([Giáo Viên / Admin]) -->|1. Upload File & Gõ Tiêu đề Bộ đề| WebUI["Giao diện Admin Web (Next.js)"]
-        WebUI -->|2. Tạo Lượt Đề Nháp mới| DB_CreateBatch["Tạo bản ghi trong bảng 'question_batches' (status = 'pending')"]
+    subgraph FlowWebAI ["2. LUỒNG TẠO TỰ ĐỘNG QUA WEB UI (AI sinh đề nháp)"]
+        UserA -->|Upload File / Nhập Prompt & Tiêu đề| WebUI
+        WebUI -->|Gọi Action tạo bộ đề| NextServer
         
-        DB_CreateBatch -->|3. Gửi tệp & Prompt sang AI| ServerAction["Next.js Server Action"]
-        ServerAction -->|4. Sinh câu hỏi JSON| GeminiA["Google Gemini API"]
-        GeminiA -->|5. Lưu tự động gắn mã Batch ID| DB_SaveDraft["Lưu vào bảng 'questions' (status = 'draft', batch_id = ID)"]
+        NextServer -->|INSERT Batch nhanh| DB_Batch
+        DB_Batch -.->|Trả về batch_id ngay lập tức (~100ms)| WebUI
+        
+        NextServer -->|Kích hoạt xử lý ngầm| BgJob
+        BgJob -->|Gửi tệp & Schema| GeminiA
+        GeminiA -->|Phản hồi JSON câu hỏi| BgJob
+        
+        BgJob -->|Thành công| DB_Success
+        BgJob -->|Thất bại| DB_Fail
     end
-    class Flow2,UserA,WebUI,DB_CreateBatch,ServerAction,GeminiA,DB_SaveDraft auto;
-
+    
     %% =============================================
     %% PHẦN KIỂM DUYỆT TRUNG TÂM THEO BỘ
     %% =============================================
-    subgraph CentralDB ["CƠ SỞ DỮ LIỆU & KIỂM DUYỆT TRUNG TÂM"]
-        DB_SaveDraft --> DB_Questions[("Bảng public.questions")]
-        DB_SaveApproved --> DB_Questions
+    subgraph CentralDB ["3. CƠ SỞ DỮ LIỆU & KIỂM DUYỆT TRUNG TÂM"]
+        DB_Success -.->|Supabase Realtime / Polling| WebUI
+        DB_Fail -.->|Supabase Realtime / Polling| WebUI
         
-        DB_Questions -->|Hiển thị gom cụm theo Lượt Tạo| WebAppReview["Trang Duyệt Theo Bộ (/admin/questions/approve)"]
-        WebAppReview -->|Xem cả bộ, tinh chỉnh từng câu| DB_Approve["Duyệt Cả Bộ: Đổi status bảng 'questions' thành 'approved' & status bảng 'question_batches' thành 'approved'"]
-        DB_Approve --> DB_Questions
+        WebUI -->|Xem & Chỉnh sửa / Xóa câu lỗi| ReviewUI
+        
+        ReviewUI -->|Click Duyệt Cả Bộ| DB_Approve
+        ReviewUI -->|Click Từ Chối Cả Bộ| DB_Reject
     end
-    class CentralDB,DB_Questions,WebAppReview,DB_Approve central;
 
-    subgraph ExamFlow ["LUỒNG THI ONLINE CỦA HỌC SINH"]
-        DB_Questions -->|Chỉ lọc câu hỏi status = 'approved'| ExamGen["Next.js Sinh đề trắc nghiệm"]
-        ExamGen -->|Làm bài trực tuyến| Student([Học Sinh])
+    %% =============================================
+    %% LUỒNG HỌC SINH LÀM BÀI
+    %% =============================================
+    subgraph ExamFlow ["4. LUỒNG LÀM BÀI CỦA HỌC SINH"]
+        DB_Approve -->|Lọc câu hỏi approved <br/> (Tận dụng Partial Index)| ExamGen
+        ExamGen -->|Làm bài trực tuyến| Student
     end
-    class ExamFlow,ExamGen,Student student;
+
+    %% Gán class cho các node để đổi màu sắc
+    class UserM,UserA,WebUI,ReviewUI client;
+    class Streamlit,NextServer,BgJob,ExamGen server;
+    class GeminiA ai;
+    class DB_Batch,DB_Success,DB_Fail,DB_Approve,DB_Reject db;
+    class Student student;
+```
+
+### 1.2. Biểu Đồ Tuần Tự Tương Tác (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Teacher as Giáo Viên (Admin)
+    participant Client as Giao diện Web (Client)
+    participant NextServer as Next.js Server Action
+    participant BgWorker as Background Route Handler (Worker)
+    participant DB as Supabase DB
+    participant Gemini as Gemini API
+
+    Teacher->>Client: Tải tài liệu & Nhập tiêu đề -> Nhấn "Tạo đề bằng AI"
+    Client->>NextServer: Gọi Server Action gửi thông tin bộ đề
+    
+    NextServer->>DB: Khởi tạo bộ đề (status = 'processing')
+    DB-->>NextServer: Trả về batch_id
+    
+    %% Phản hồi nhanh để tránh Server Action Timeout
+    NextServer-->>Client: Trả về batch_id ngay lập tức (~100ms)
+    
+    Note over Client: Client hiển thị màn hình chờ,<br/>đăng ký Supabase Realtime theo dõi batch_id
+
+    %% Tiến trình gọi AI chạy bất đồng bộ
+    NextServer->>BgWorker: Kích hoạt job xử lý tài liệu ngầm (background call)
+    deactivate NextServer
+    
+    activate BgWorker
+    BgWorker->>Gemini: Gửi tài liệu & JSON Schema yêu cầu sinh câu hỏi
+    activate Gemini
+    Note over Gemini: Gemini xử lý tài liệu dài<br/>(Mất từ 15s - 45s)
+    Gemini-->>BgWorker: Trả về dữ liệu câu hỏi chuẩn JSON
+    deactivate Gemini
+    
+    alt Xử lý thành công
+        BgWorker->>DB: Lưu các câu hỏi nháp (status = 'draft', batch_id)
+        BgWorker->>DB: Cập nhật batch (status = 'pending')
+        DB-->>Client: [Realtime Event] Trạng thái batch đổi sang 'pending'
+        Client->>Teacher: Hiển thị danh sách câu hỏi nháp để kiểm duyệt
+    else Gặp lỗi (API error / File không đọc được)
+        BgWorker->>DB: Cập nhật batch (status = 'failed', error_message)
+        DB-->>Client: [Realtime Event] Trạng thái batch đổi sang 'failed'
+        Client->>Teacher: Hiển thị thông báo lỗi chi tiết để xử lý lại
+    end
+    deactivate BgWorker
+
+    %% Quy trình kiểm duyệt
+    Note over Teacher, DB: Quy trình Giáo viên kiểm duyệt bộ đề nháp
+    Teacher->>Client: Sửa đổi nội dung câu lỗi & Nhấn "Phê duyệt cả bộ"
+    Client->>NextServer: Yêu cầu duyệt bộ đề (batch_id)
+    activate NextServer
+    NextServer->>DB: Thực thi TRANSACTION (Cập nhật batch & toàn bộ câu hỏi con sang 'approved')
+    DB-->>NextServer: Thành công
+    NextServer-->>Client: Phản hồi duyệt thành công
+    deactivate NextServer
+    Client->>Teacher: Cập nhật giao diện (Bộ đề đã đưa vào hoạt động)
 ```
 
 ---
 
 ## 2. Phương Án Thiết Kế Cơ Sở Dữ Liệu Tối Ưu (Database Schema Update)
 
-Để gom cụm các câu hỏi theo từng lượt tạo, chúng ta tạo thêm bảng **`question_batches`** và liên kết khóa ngoại với bảng **`questions`**:
+Để gom cụm các câu hỏi theo từng lượt tạo, chúng ta tạo thêm bảng **`question_batches`** có hỗ trợ theo dõi trạng thái lỗi, đồng thời tạo các **Index** chuyên biệt nhằm tối ưu hóa hiệu năng truy vấn cho cả giáo viên và học sinh:
 
 ```sql
--- 1. Tạo bảng quản lý Lượt tạo bộ câu hỏi
+-- 1. Tạo bảng quản lý Lượt tạo bộ câu hỏi (Hỗ trợ cột ghi lỗi và đếm số lượng)
 CREATE TABLE IF NOT EXISTS public.question_batches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,          -- Ví dụ: "Bộ đề Chương 4 Lớp 12: Sinh học di truyền"
-    document_name TEXT,           -- Tên tệp tài liệu tham khảo đã dùng để bóc tách
-    status TEXT DEFAULT 'pending' NOT NULL, -- 'pending' (chờ duyệt), 'approved' (đã duyệt cả bộ), 'rejected' (bị từ chối)
-    created_by UUID REFERENCES auth.users(id),
+    title TEXT NOT NULL,                    -- Ví dụ: "Bộ đề Chương 4 Lớp 12: Sinh học di truyền"
+    document_name TEXT,                     -- Tên tệp tài liệu tham khảo đã dùng để bóc tách
+    status TEXT DEFAULT 'pending' NOT NULL, -- 'pending' (chờ duyệt), 'processing' (đang sinh), 'approved' (đã duyệt cả bộ), 'failed' (sinh lỗi)
+    error_message TEXT,                     -- Lưu thông tin lỗi chi tiết nếu Gemini API gặp sự cố
+    total_questions INTEGER DEFAULT 0,       -- Tổng số câu hỏi mong muốn tạo trong đợt này
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -83,10 +178,19 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 3. Thêm các cột bổ sung vào bảng questions
+-- 3. Thêm các cột bổ sung vào bảng questions (Cấu hình ON DELETE CASCADE để tự động dọn dẹp khi từ chối bộ đề)
 ALTER TABLE public.questions 
 ADD COLUMN IF NOT EXISTS status question_status DEFAULT 'approved'::question_status NOT NULL,
 ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES public.question_batches(id) ON DELETE CASCADE;
+
+-- 4. TẠO CÁC INDEX TỐI ƯU HÓA HIỆU NĂNG TRUY VẤN
+-- Tăng tốc truy vấn và cập nhật trạng thái câu hỏi theo Batch (Dành cho Giáo viên duyệt đề)
+CREATE INDEX IF NOT EXISTS idx_questions_batch_id ON public.questions(batch_id);
+
+-- Partial Index: Tăng tốc truy vấn sinh đề thi cho học sinh (Bỏ qua hoàn toàn các câu hỏi nháp 'draft')
+CREATE INDEX IF NOT EXISTS idx_questions_approved_subject_grade 
+ON public.questions(subject_id, grade) 
+WHERE status = 'approved';
 ```
 
 ---

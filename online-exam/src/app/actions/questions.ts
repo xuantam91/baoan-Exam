@@ -10,7 +10,7 @@ export async function getQuestions(
   lessonId?: string
 ) {
   try {
-    let query = supabase.from('questions').select('*, subjects(name), chapters(title), lessons(title)');
+    let query = supabase.from('questions').select('*, subjects(name), chapters(title), lessons(title)').eq('status', 'approved');
     
     if (subjectId && subjectId !== 'all') {
       query = query.eq('subject_id', subjectId);
@@ -120,7 +120,7 @@ export async function getQuestionCountStats(
   lessonIds?: string[]
 ) {
   try {
-    let query = supabase.from('questions').select('difficulty, question_type').eq('subject_id', subjectId);
+    let query = supabase.from('questions').select('difficulty, question_type').eq('subject_id', subjectId).eq('status', 'approved');
     if (grade && grade !== '') {
       query = query.eq('grade', grade);
     }
@@ -176,7 +176,8 @@ export async function getCurriculumQuestionCounts(subjectId: string, grade: stri
       .from('questions')
       .select('chapter_id, lesson_id')
       .eq('subject_id', subjectId)
-      .eq('grade', grade);
+      .eq('grade', grade)
+      .eq('status', 'approved');
       
     if (error) throw error;
     

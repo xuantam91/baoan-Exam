@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getSubjects, getChapters, getLessons } from '@/app/actions/metadata';
 import { getQuestions, createQuestion, updateQuestion, deleteQuestion } from '@/app/actions/questions';
@@ -17,7 +18,8 @@ import {
   BookOpen, 
   HelpCircle,
   AlertCircle,
-  ImageIcon
+  ImageIcon,
+  Sparkles
 } from 'lucide-react';
 
 export default function QuestionsPage() {
@@ -415,13 +417,22 @@ export default function QuestionsPage() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          disabled={subjects.length === 0}
-          className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all cursor-pointer shadow-md shadow-indigo-600/10 disabled:opacity-50"
-        >
-          <Plus className="w-4 h-4" /> Thêm Câu Hỏi
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link
+            href="/admin/questions/generate"
+            className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-sm transition-all cursor-pointer shadow-md shadow-indigo-600/10"
+          >
+            <Sparkles className="w-4 h-4 text-purple-200" /> Tạo Câu Hỏi AI 🪄
+          </Link>
+          
+          <button
+            onClick={handleOpenAdd}
+            disabled={subjects.length === 0}
+            className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-semibold text-sm transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-slate-700"
+          >
+            <Plus className="w-4 h-4" /> Thêm Thủ Công
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards Row */}

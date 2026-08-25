@@ -65,8 +65,8 @@ export async function createRandomExam({
       grade = classData?.grade;
     }
 
-    // 2. Query questions matching criteria
-    let query = supabase.from('questions').select('id, question_type, difficulty').eq('subject_id', subjectId);
+    // 2. Query questions matching criteria (only select approved questions)
+    let query = supabase.from('questions').select('id, question_type, difficulty').eq('subject_id', subjectId).eq('status', 'approved');
     if (grade) {
       query = query.eq('grade', grade);
     }
