@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getSubjects, getClasses, getChapters, getLessons } from '@/app/actions/metadata';
-import { getExams, createRandomExam, deleteExam, sendExamLinksToClass } from '@/app/actions/exams';
+import { getExams, createRandomExam, deleteExam, sendExamLinksToClass, getExamTemplates, createExamTemplate, deleteExamTemplate } from '@/app/actions/exams';
 import { getQuestionCountStats, getCurriculumQuestionCounts } from '@/app/actions/questions';
 import { 
   FileSpreadsheet, 
@@ -48,6 +48,98 @@ export default function ExamsPage() {
   const [tfCount, setTfCount] = useState(0);
   const [fillCount, setFillCount] = useState(0);
   const [essayCount, setEssayCount] = useState(0);
+
+  // Templates states
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('All');
+  const [newTemplateName, setNewTemplateName] = useState<string>('');
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState<boolean>(false);
+  const [savingTemplate, setSavingTemplate] = useState<boolean>(false);
+
+  const loadTemplates = async () => {
+    const res = await getExamTemplates();
+    if (res.success) {
+      setTemplates(res.data || []);
+    }
+  };
+
+  const handleSelectTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (templateId === 'All') {
+      setEnableConfig(false);
+      return;
+    }
+    
+    if (templateId === 'preset-2025') {
+      setEnableConfig(true);
+      setNumQuestions(28);
+      setDurationMinutes(50);
+      setEasyCount(0);
+      setMediumCount(0);
+      setHardCount(0);
+      setMcCount(18);
+      setTfCount(4);
+      setFillCount(6);
+      setEssayCount(0);
+      return;
+    }
+
+    const t = templates.find(item => item.id === templateId);
+    if (t) {
+      setEnableConfig(true);
+      setNumQuestions(t.mc_count + t.tf_count + t.fill_count + t.essay_count);
+      setDurationMinutes(t.duration_minutes);
+      setEasyCount(t.easy_count);
+      setMediumCount(t.medium_count);
+      setHardCount(t.hard_count);
+      setMcCount(t.mc_count);
+      setTfCount(t.tf_count);
+      setFillCount(t.fill_count);
+      setEssayCount(t.essay_count);
+    }
+  };
+
+  const handleSaveTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTemplateName.trim()) {
+      alert('Vui lòng nhập tên mẫu cấu trúc.');
+      return;
+    }
+    setSavingTemplate(true);
+    const res = await createExamTemplate({
+      name: newTemplateName.trim(),
+      durationMinutes,
+      easyCount,
+      mediumCount,
+      hardCount,
+      mcCount,
+      tfCount,
+      fillCount,
+      essayCount
+    });
+    if (res.success) {
+      alert('Đã lưu mẫu cấu trúc đề thi thành công!');
+      setNewTemplateName('');
+      setShowSaveTemplateModal(false);
+      loadTemplates();
+    } else {
+      alert(`Lỗi khi lưu mẫu: ${res.error}`);
+    }
+    setSavingTemplate(false);
+  };
+
+  const handleDeleteTemplate = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Bạn có chắc chắn muốn xóa mẫu cấu trúc "${name}"?`)) return;
+    const res = await deleteExamTemplate(id);
+    if (res.success) {
+      setSelectedTemplateId('All');
+      setEnableConfig(false);
+      loadTemplates();
+    } else {
+      alert(`Lỗi khi xóa mẫu: ${res.error}`);
+    }
+  };
 
   // Question bank availability stats
   const [questionStats, setQuestionStats] = useState<any>({
@@ -189,6 +281,7 @@ export default function ExamsPage() {
   useEffect(() => {
     loadExams();
     loadMetadata();
+    loadTemplates();
   }, []);
 
   const loadExams = async () => {
@@ -515,6 +608,38 @@ export default function ExamsPage() {
                 </div>
               )}
 
+              {/* Cấu trúc mẫu (Exam Templates) */}
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>Mẫu cấu trúc đề thi</span>
+                  {selectedTemplateId !== 'All' && selectedTemplateId !== 'preset-2025' && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        const name = templates.find(t => t.id === selectedTemplateId)?.name || '';
+                        handleDeleteTemplate(selectedTemplateId, name, e);
+                      }}
+                      className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold cursor-pointer"
+                    >
+                      Xóa mẫu này
+                    </button>
+                  )}
+                </label>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => handleSelectTemplate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium"
+                >
+                  <option value="All">Sinh ngẫu nhiên (Không áp dụng mẫu)</option>
+                  <option value="preset-2025">✨ Đề thi THPT Quốc gia 2025 (18 TN - 4 ĐS - 6 TLN)</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      📂 {t.name} ({t.mc_count} TN, {t.tf_count} ĐS, {t.fill_count} TLN, {t.essay_count} TL)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">Số lượng câu hỏi</label>
@@ -656,6 +781,17 @@ export default function ExamsPage() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* Save config as Template button */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowSaveTemplateModal(true)}
+                      className="w-full text-center py-1.5 px-3 border border-dashed border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    >
+                      💾 Lưu cấu hình này thành mẫu cấu trúc mới
+                    </button>
                   </div>
 
                 </div>
@@ -992,6 +1128,57 @@ export default function ExamsPage() {
                 Gửi Lớp
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Save Template Modal */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-950 rounded-2xl w-full max-w-md p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <h3 className="text-lg font-bold mb-2">Lưu Mẫu Cấu Trúc Đề Thi</h3>
+            <p className="text-xs text-slate-400 mb-4">Nhập tên để lưu lại cấu hình phân bổ câu hỏi này cho các lần tạo đề sau.</p>
+            
+            <form onSubmit={handleSaveTemplate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1 text-slate-600 dark:text-slate-400">Tên mẫu cấu trúc *</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Kiểm tra Giữa kỳ Lý 11"
+                  required
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Readonly info about config being saved */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs space-y-1 text-slate-500">
+                <p>• Thời gian: <strong>{durationMinutes} phút</strong></p>
+                <p>• Độ khó: <strong>{easyCount} Dễ - {mediumCount} TB - {hardCount} Khó</strong></p>
+                <p>• Dạng câu: <strong>{mcCount} TN - {tfCount} Đ/S - {fillCount} Trả lời ngắn - {essayCount} Tự luận</strong></p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSaveTemplateModal(false);
+                    setNewTemplateName('');
+                  }}
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingTemplate}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                >
+                  {savingTemplate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  Xác nhận lưu
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

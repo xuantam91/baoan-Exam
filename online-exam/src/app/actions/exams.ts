@@ -1,6 +1,7 @@
 'use server';
 
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/server';
 import { sendEmail } from '@/lib/email';
 import { revalidatePath } from 'next/cache';
 
@@ -163,14 +164,27 @@ export async function createRandomExam({
       if (!success) {
         throw new Error('Không tìm thấy tổ hợp câu hỏi thỏa mãn chính xác các yêu cầu cấu hình. Vui lòng bổ sung thêm câu hỏi vào ngân hàng hoặc giảm số lượng yêu cầu.');
       }
-      selectedIds = selected.map(q => q.id);
+      const typeOrder = { MultipleChoice: 1, TrueFalse: 2, FillIn: 3, Essay: 4 };
+      const sortedSelected = [...selected].sort((a, b) => {
+        const orderA = typeOrder[a.question_type as keyof typeof typeOrder] || 99;
+        const orderB = typeOrder[b.question_type as keyof typeof typeOrder] || 99;
+        return orderA - orderB;
+      });
+      selectedIds = sortedSelected.map(q => q.id);
     } else {
       // Fallback: simple random N questions
       if (questions.length < numQuestions) {
         throw new Error(`Kho câu hỏi chỉ có ${questions.length} câu, không đủ để sinh đề ${numQuestions} câu.`);
       }
       const shuffled = [...questions].sort(() => 0.5 - Math.random());
-      selectedIds = shuffled.slice(0, numQuestions).map(q => q.id);
+      const chosenQuestions = shuffled.slice(0, numQuestions);
+      const typeOrder = { MultipleChoice: 1, TrueFalse: 2, FillIn: 3, Essay: 4 };
+      const sortedSelected = [...chosenQuestions].sort((a, b) => {
+        const orderA = typeOrder[a.question_type as keyof typeof typeOrder] || 99;
+        const orderB = typeOrder[b.question_type as keyof typeof typeOrder] || 99;
+        return orderA - orderB;
+      });
+      selectedIds = sortedSelected.map(q => q.id);
     }
 
     // 4. Insert exam
@@ -450,3 +464,94 @@ export async function getParentDashboardInfo(parentUserId: string) {
     return { success: false, error: error.message };
   }
 }
+
+// Fetch exam templates
+export async function getExamTemplates() {
+  try {
+    const supabaseServer = await createClient();
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    
+    // Allow users to see templates they created, plus global ones (where created_by is null)
+    const { data, error } = await supabaseServer
+      .from('exam_templates')
+      .select('*')
+      .or(`created_by.is.null,created_by.eq.${user?.id || '00000000-0000-0000-0000-000000000000'}`)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error('getExamTemplates error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+interface CreateExamTemplateInput {
+  name: string;
+  durationMinutes: number;
+  easyCount: number;
+  mediumCount: number;
+  hardCount: number;
+  mcCount: number;
+  tfCount: number;
+  fillCount: number;
+  essayCount: number;
+}
+
+// Create new exam template
+export async function createExamTemplate(input: CreateExamTemplateInput) {
+  try {
+    const supabaseServer = await createClient();
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    if (!user) throw new Error('Yêu cầu đăng nhập để thực hiện hành động này.');
+
+    const { data, error } = await supabaseServer
+      .from('exam_templates')
+      .insert({
+        name: input.name,
+        duration_minutes: input.durationMinutes,
+        easy_count: input.easyCount,
+        medium_count: input.mediumCount,
+        hard_count: input.hardCount,
+        mc_count: input.mcCount,
+        tf_count: input.tfCount,
+        fill_count: input.fillCount,
+        essay_count: input.essayCount,
+        created_by: user.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    revalidatePath('/admin/exams');
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('createExamTemplate error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Delete exam template
+export async function deleteExamTemplate(id: string) {
+  try {
+    const supabaseServer = await createClient();
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    if (!user) throw new Error('Yêu cầu đăng nhập.');
+
+    const { error } = await supabaseServer
+      .from('exam_templates')
+      .delete()
+      .eq('id', id)
+      .eq('created_by', user.id);
+
+    if (error) throw error;
+    
+    revalidatePath('/admin/exams');
+    return { success: true };
+  } catch (error: any) {
+    console.error('deleteExamTemplate error:', error);
+    return { success: false, error: error.message };
+  }
+}
+

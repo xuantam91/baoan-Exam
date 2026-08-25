@@ -674,6 +674,36 @@ export default function ExamPrintPage() {
 
           <div className="space-y-6 text-sm">
             {questions.map((q, idx) => {
+              const isFirstOfType = idx === 0 || questions[idx - 1].question_type !== q.question_type;
+              let sectionHeader = null;
+              if (isFirstOfType) {
+                if (q.question_type === 'MultipleChoice') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-slate-300 pb-1 mb-4 uppercase text-xs tracking-wider text-slate-800">
+                      PHẦN I. Đáp án câu hỏi trắc nghiệm nhiều lựa chọn
+                    </div>
+                  );
+                } else if (q.question_type === 'TrueFalse') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-slate-300 pb-1 mb-4 uppercase text-xs tracking-wider text-slate-800 mt-6">
+                      PHẦN II. Đáp án câu hỏi trắc nghiệm Đúng/Sai
+                    </div>
+                  );
+                } else if (q.question_type === 'FillIn') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-slate-300 pb-1 mb-4 uppercase text-xs tracking-wider text-slate-800 mt-6">
+                      PHẦN III. Đáp án câu hỏi trắc nghiệm trả lời ngắn (Điền đáp án)
+                    </div>
+                  );
+                } else if (q.question_type === 'Essay') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-slate-300 pb-1 mb-4 uppercase text-xs tracking-wider text-slate-800 mt-6">
+                      PHẦN IV. Đáp án câu hỏi tự luận
+                    </div>
+                  );
+                }
+              }
+
               let displayAns = q.correct_answer;
               if (q.question_type === 'TrueFalse') {
                 try {
@@ -688,6 +718,7 @@ export default function ExamPrintPage() {
               }
               return (
                 <div key={q.id} className="space-y-2 border-b border-slate-200 pb-4">
+                  {sectionHeader}
                   <p className="font-bold font-sans">Câu {idx + 1} ({q.question_type === 'MultipleChoice' ? 'Trắc nghiệm' : q.question_type === 'TrueFalse' ? 'Đúng/Sai' : q.question_type === 'FillIn' ? 'Điền đáp án' : 'Tự luận'}):</p>
                   <div className="pl-4 border-l-2 border-slate-300 space-y-2">
                     <div className="italic text-slate-700">
@@ -815,9 +846,40 @@ export default function ExamPrintPage() {
 
             {/* Questions Listing */}
             <div className="space-y-8 font-serif leading-relaxed text-sm">
-              {questions.map((q, idx) => {
-                return (
-                  <div key={q.id} className="space-y-3">
+            {questions.map((q, idx) => {
+              const isFirstOfType = idx === 0 || questions[idx - 1].question_type !== q.question_type;
+              let sectionHeader = null;
+              if (isFirstOfType) {
+                if (q.question_type === 'MultipleChoice') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider">
+                      PHẦN I. Câu hỏi trắc nghiệm nhiều lựa chọn
+                    </div>
+                  );
+                } else if (q.question_type === 'TrueFalse') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
+                      PHẦN II. Câu hỏi trắc nghiệm Đúng/Sai
+                    </div>
+                  );
+                } else if (q.question_type === 'FillIn') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
+                      PHẦN III. Câu hỏi trắc nghiệm trả lời ngắn (Điền đáp án)
+                    </div>
+                  );
+                } else if (q.question_type === 'Essay') {
+                  sectionHeader = (
+                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
+                      PHẦN IV. Câu hỏi tự luận
+                    </div>
+                  );
+                }
+              }
+
+              return (
+                <div key={q.id} className="space-y-3">
+                  {sectionHeader}
                     
                     {/* Content */}
                     <div className="flex gap-1.5 items-start">

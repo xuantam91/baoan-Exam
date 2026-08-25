@@ -182,6 +182,7 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
       score,
       status,
       totalQuestions,
+      correctCount: parseFloat(autoQuestionCredits.toFixed(2)),
       submissionId: submission.id
     };
   } catch (error: any) {
@@ -341,7 +342,7 @@ export async function getSubmissions() {
   try {
     const { data, error } = await supabase
       .from('submissions')
-      .select('*, exams(title, subjects(name)), students(name, email, class_id)')
+      .select('*, exams(title, question_ids, subjects(name)), students(name, email, class_id)')
       .order('submitted_at', { ascending: false });
 
     if (error) throw error;

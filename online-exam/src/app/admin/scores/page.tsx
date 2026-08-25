@@ -484,6 +484,7 @@ export default function ScoresPage() {
                   <th className="px-6 py-3 text-left font-semibold text-slate-500">Đề thi</th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-500">Môn học</th>
                   <th className="px-6 py-3 text-center font-semibold text-slate-500">Điểm trắc nghiệm</th>
+                  <th className="px-6 py-3 text-center font-semibold text-slate-500">Số câu đúng</th>
                   <th className="px-6 py-3 text-center font-semibold text-slate-500">Điểm cuối cùng</th>
                   <th className="px-6 py-3 text-center font-semibold text-slate-500">Trạng thái</th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-500">Thời gian nộp</th>
@@ -514,6 +515,12 @@ export default function ScoresPage() {
                       </td>
                       <td className="px-6 py-3 text-center font-medium text-slate-500">
                         {sub.score}
+                      </td>
+                      <td className="px-6 py-3 text-center font-medium text-slate-500">
+                        {sub.correct_count !== undefined && sub.correct_count !== null 
+                          ? `${sub.correct_count} / ${sub.exams?.question_ids?.length || 0}`
+                          : '-'
+                        }
                       </td>
                       <td className="px-6 py-3 text-center">
                         <span className={`text-base font-bold ${
@@ -594,6 +601,7 @@ export default function ScoresPage() {
                     <div className="space-y-1.5 text-sm">
                       <div className="flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-violet-500" /> <strong>Đề thi:</strong> {modalDetails.submission?.exams?.title}</div>
                       <div className="flex items-center gap-2"><Award className="w-4 h-4 text-violet-500" /> <strong>Điểm trắc nghiệm sơ bộ:</strong> <span className="font-bold">{modalDetails.submission?.score} / 10</span></div>
+                      <div className="flex items-center gap-2"><ClipboardCheck className="w-4 h-4 text-emerald-500" /> <strong>Số câu đúng:</strong> <span className="font-bold text-emerald-600 dark:text-emerald-400">{modalDetails.submission?.correct_count} / {modalDetails.submission?.exams?.question_ids?.length || 0} câu</span></div>
                       <div className="flex items-center gap-2"><Award className="w-4 h-4 text-indigo-500" /> <strong>Điểm cuối cùng:</strong> <span className="font-bold text-indigo-600 dark:text-indigo-400">{modalDetails.submission?.graded_score !== null ? modalDetails.submission.graded_score : 'Chưa chấm tự luận'}</span></div>
                     </div>
                   </div>

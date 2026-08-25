@@ -358,13 +358,44 @@ export default function StudentQuizPage() {
         <div className="lg:col-span-3 space-y-6">
           {questions.map((q, idx) => {
             const selectedOpt = answers[q.id];
+            const isFirstOfType = idx === 0 || questions[idx - 1].question_type !== q.question_type;
             
+            let sectionHeader = null;
+            if (isFirstOfType) {
+              if (q.question_type === 'MultipleChoice') {
+                sectionHeader = (
+                  <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 font-bold rounded-xl text-sm border border-indigo-100 dark:border-indigo-900/50 uppercase tracking-wider mb-4">
+                    Phần I: Câu hỏi trắc nghiệm nhiều lựa chọn
+                  </div>
+                );
+              } else if (q.question_type === 'TrueFalse') {
+                sectionHeader = (
+                  <div className="p-4 bg-violet-50/50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400 font-bold rounded-xl text-sm border border-violet-100 dark:border-violet-900/50 uppercase tracking-wider mb-4">
+                    Phần II: Câu hỏi trắc nghiệm Đúng/Sai
+                  </div>
+                );
+              } else if (q.question_type === 'FillIn') {
+                sectionHeader = (
+                  <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 font-bold rounded-xl text-sm border border-amber-100 dark:border-amber-900/50 uppercase tracking-wider mb-4">
+                    Phần III: Câu hỏi trắc nghiệm trả lời ngắn (Điền đáp án)
+                  </div>
+                );
+              } else if (q.question_type === 'Essay') {
+                sectionHeader = (
+                  <div className="p-4 bg-pink-50/50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-400 font-bold rounded-xl text-sm border border-pink-100 dark:border-pink-900/50 uppercase tracking-wider mb-4">
+                    Phần IV: Câu hỏi tự luận
+                  </div>
+                );
+              }
+            }
+
             return (
-              <div 
-                key={q.id} 
-                id={`question-${idx + 1}`}
-                className="card-el p-6 shadow-sm scroll-mt-20 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950"
-              >
+              <div key={q.id} className="space-y-4 mb-6">
+                {sectionHeader}
+                <div 
+                  id={`question-${idx + 1}`}
+                  className="card-el p-6 shadow-sm scroll-mt-20 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950"
+                >
                 {/* Question title and content */}
                 <div className="flex gap-2 items-start mb-4">
                   <span className="font-bold text-sm text-indigo-600 dark:text-indigo-400 shrink-0 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded">
@@ -505,7 +536,8 @@ export default function StudentQuizPage() {
                   )}
                 </div>
               </div>
-            );
+            </div>
+          );
           })}
         </div>
 
