@@ -418,10 +418,10 @@ export async function getScoreStatistics() {
       .order('created_at', { ascending: false });
     if (examsError) throw examsError;
 
-    // 2. Fetch all students count per class
+    // 2. Fetch all students details per class
     const { data: students, error: studentsError } = await supabase
       .from('students')
-      .select('id, class_id');
+      .select('id, name, email, class_id');
     if (studentsError) throw studentsError;
 
     // 3. Fetch all submissions with score and graded_score

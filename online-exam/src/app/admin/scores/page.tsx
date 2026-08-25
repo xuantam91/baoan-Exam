@@ -46,6 +46,9 @@ export default function ScoresPage() {
   const [essayGrades, setEssayGrades] = useState<Record<string, { score: number; comment: string }>>({});
   const [gradingSubmitting, setGradingSubmitting] = useState(false);
 
+  // Pending students details modal state
+  const [pendingStudentsModal, setPendingStudentsModal] = useState<{ examTitle: string; students: any[] } | null>(null);
+
   useEffect(() => {
     loadSubmissions();
   }, []);
@@ -161,6 +164,11 @@ export default function ScoresPage() {
     const submittedCount = examSubmissions.length;
     const pendingSubmissionCount = Math.max(0, classStudents - submittedCount);
 
+    const submittedStudentIds = new Set(examSubmissions.map(sub => sub.student_id));
+    const pendingStudents = exam.class_id
+      ? statsStudents.filter(s => s.class_id === exam.class_id && !submittedStudentIds.has(s.id))
+      : [];
+
     const gradedCount = examSubmissions.filter(sub => sub.graded_score !== null).length;
     const ungradedCount = examSubmissions.filter(sub => sub.graded_score === null).length;
 
@@ -171,6 +179,7 @@ export default function ScoresPage() {
       classStudents,
       submittedCount,
       pendingSubmissionCount,
+      pendingStudents,
       gradedCount,
       ungradedCount,
       completionRate
@@ -385,7 +394,7 @@ export default function ScoresPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {examStatsList.map(({ exam, classStudents, submittedCount, pendingSubmissionCount, gradedCount, ungradedCount, completionRate }) => (
+                {examStatsList.map(({ exam, classStudents, submittedCount, pendingSubmissionCount, pendingStudents, gradedCount, ungradedCount, completionRate }) => (
                   <tr key={exam.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
                     <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
                       <div>
@@ -426,8 +435,18 @@ export default function ScoresPage() {
                     <td className="px-4 py-3 text-center font-bold text-violet-600 dark:text-violet-400">
                       {submittedCount}
                     </td>
-                    <td className="px-4 py-3 text-center font-semibold text-slate-400">
-                      {pendingSubmissionCount}
+                    <td className="px-4 py-3 text-center font-semibold">
+                      {pendingSubmissionCount > 0 && pendingStudents.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setPendingStudentsModal({ examTitle: exam.title, students: pendingStudents })}
+                          className="font-bold text-rose-500 hover:text-rose-700 underline decoration-dashed cursor-pointer"
+                        >
+                          {pendingSubmissionCount}
+                        </button>
+                      ) : (
+                        <span className="text-slate-400 font-semibold">{pendingSubmissionCount}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center font-semibold text-emerald-600 dark:text-emerald-400">
                       {gradedCount}
@@ -816,6 +835,57 @@ export default function ScoresPage() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Pending Students Modal */}
+      {pendingStudentsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-950 rounded-2xl w-full max-w-md p-6 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">📋 HS Chưa Làm Bài</h3>
+              <button
+                onClick={() => setPendingStudentsModal(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-xs text-slate-400">Đề thi:</p>
+              <p className="text-sm font-bold text-indigo-650 dark:text-indigo-400">{pendingStudentsModal.examTitle}</p>
+              <p className="text-[10px] text-slate-400 mt-1">Danh sách gồm {pendingStudentsModal.students.length} học sinh chưa nộp bài:</p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {pendingStudentsModal.students.map((student, index) => (
+                <div key={student.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-150 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/20">
+                  <div className="text-xs">
+                    <p className="font-bold text-slate-700 dark:text-slate-300">{index + 1}. {student.name}</p>
+                    <p className="text-[10px] text-slate-400 font-normal mt-0.5">{student.email || 'Không có email'}</p>
+                  </div>
+                  {student.email && (
+                    <a
+                      href={`mailto:${student.email}?subject=Nhắc nhở làm bài thi: ${encodeURIComponent(pendingStudentsModal.examTitle)}&body=Chào ${encodeURIComponent(student.name)},%0D%0A%0D%0ABạn có một bài kiểm tra chưa hoàn thành: "${encodeURIComponent(pendingStudentsModal.examTitle)}".%0D%0AVui lòng truy cập hệ thống và hoàn thành bài kiểm tra sớm nhất có thể nhé.`}
+                      className="text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 px-2.5 py-1 rounded font-bold transition-all cursor-pointer"
+                    >
+                      Gửi Mail nhắc
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
+              <button
+                onClick={() => setPendingStudentsModal(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-900 dark:hover:bg-slate-850 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}
