@@ -8,6 +8,8 @@ export const maxDuration = 300;
 
 export async function POST(req: Request) {
   let requestBatchId: string | null = null;
+  let apiKey = '';
+  const uploadedFiles: string[] = [];
   
   try {
     const body = await req.json();
@@ -33,23 +35,25 @@ export async function POST(req: Request) {
     }
 
     // 1. Lấy API Key của Gemini
-    let apiKey = geminiKey || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    let resolvedKey = geminiKey || process.env.GEMINI_API_KEY;
+    if (!resolvedKey) {
       const { data: configData } = await supabase
         .from('system_settings')
         .select('value')
         .eq('key', 'gemini_api_key')
         .maybeSingle();
       if (configData && configData.value && configData.value.apiKey) {
-        apiKey = configData.value.apiKey;
+        resolvedKey = configData.value.apiKey;
       }
     }
 
-    if (!apiKey) {
+    if (!resolvedKey) {
       const errorMsg = 'Không tìm thấy API Key của Gemini. Vui lòng cấu hình trong file .env.local, nhập trực tiếp hoặc lưu cấu hình trên server.';
       await updateBatchStatus(batchId, 'failed', errorMsg);
       return NextResponse.json({ success: false, error: errorMsg }, { status: 400 });
     }
+
+    apiKey = resolvedKey;
 
     // 2. Lấy tên môn học để đưa vào Prompt
     const { data: subjectData, error: subjectError } = await supabase
@@ -133,27 +137,65 @@ ${documentText}`;
       required: ["questions"]
     };
 
-    // 5. Chuẩn bị các parts gửi cho Gemini (Hỗ trợ Nhiều files tài liệu & ảnh Base64)
+    // 5. Chuẩn bị các parts gửi cho Gemini (Hỗ trợ Nhiều files tài liệu & ảnh bằng Files API)
     const parts: any[] = [{ text: prompt }];
     let combinedText = '';
-    const imageParts: any[] = [];
 
     if (files && files.length > 0) {
       for (const file of files) {
         const buffer = Buffer.from(file.base64, 'base64');
         
         if (file.type.startsWith('image/')) {
-          imageParts.push({
-            inlineData: {
-              mimeType: file.type,
-              data: file.base64
+          try {
+            console.log(`Đang tải ảnh ${file.name} lên Gemini Files API...`);
+            const fileInfo = await uploadToGeminiFilesAPI(buffer, file.type, file.name, apiKey);
+            uploadedFiles.push(fileInfo.name);
+            parts.push({
+              fileData: {
+                fileUri: fileInfo.uri,
+                mimeType: file.type
+              }
+            });
+          } catch (e: any) {
+            console.error(`Lỗi upload ảnh ${file.name} lên Files API:`, e);
+            // Fallback sang gửi inlineData (base64) nếu upload lỗi
+            parts.push({
+              inlineData: {
+                mimeType: file.type,
+                data: file.base64
+              }
+            });
+          }
+        } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+          try {
+            console.log(`Đang tải PDF ${file.name} lên Gemini Files API...`);
+            const mime = file.type || 'application/pdf';
+            const fileInfo = await uploadToGeminiFilesAPI(buffer, mime, file.name, apiKey);
+            uploadedFiles.push(fileInfo.name);
+            parts.push({
+              fileData: {
+                fileUri: fileInfo.uri,
+                mimeType: mime
+              }
+            });
+          } catch (e: any) {
+            console.error(`Lỗi upload PDF ${file.name} lên Files API, chuyển sang phân tích text cục bộ:`, e);
+            // Fallback sang parse text cục bộ bằng officeparser
+            try {
+              const ast = await (officeParser as any).parseOffice(buffer, { fileType: 'pdf' });
+              const textContent = await ast.to('text');
+              const text = typeof textContent === 'string' ? textContent : (textContent?.value || '');
+              combinedText += `\n--- Nội dung tệp (PDF): ${file.name} ---\n${text}\n`;
+            } catch (innerErr: any) {
+              console.error(`Lỗi phân tích fallback PDF ${file.name}:`, innerErr);
+              throw new Error(`Không thể xử lý tệp PDF "${file.name}". Lỗi: ${e.message || e}`);
             }
-          });
+          }
         } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
           const text = buffer.toString('utf-8');
           combinedText += `\n--- Nội dung tệp: ${file.name} ---\n${text}\n`;
         } else {
-          // Xử lý các định dạng Office khác (PDF, DOCX, PPTX, XLSX) thông qua officeparser v6+ AST
+          // Xử lý các định dạng Office khác (DOCX, PPTX, XLSX) thông qua officeparser v6+ AST
           try {
             const fileTypeHint = file.name.split('.').pop() || '';
             const ast = await (officeParser as any).parseOffice(buffer, { fileType: fileTypeHint });
@@ -176,11 +218,6 @@ ${documentText}`;
       parts.push({
         text: `Tài liệu tham khảo để sinh câu hỏi:\n${combinedText}`
       });
-    }
-
-    // Thêm các file ảnh gửi trực tiếp sang Gemini
-    if (imageParts.length > 0) {
-      parts.push(...imageParts);
     }
 
     // Gọi Gemini API bằng fetch
@@ -265,6 +302,21 @@ ${documentText}`;
       { success: false, error: error.message || 'Lỗi xử lý sinh đề thi AI.' },
       { status: 500 }
     );
+  } finally {
+    // Dọn dẹp các tệp tạm đã tải lên Google Files API để bảo mật thông tin và giải phóng bộ nhớ
+    for (const fileName of uploadedFiles) {
+      try {
+        console.log(`Đang dọn dẹp file tạm trên Gemini: ${fileName}`);
+        await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`,
+          {
+            method: 'DELETE'
+          }
+        );
+      } catch (delError) {
+        console.error(`Lỗi khi xóa file tạm ${fileName} trên Gemini:`, delError);
+      }
+    }
   }
 }
 
@@ -280,4 +332,84 @@ async function updateBatchStatus(batchId: string, status: 'failed', errorMessage
   } catch (e) {
     console.error('updateBatchStatus error:', e);
   }
+}
+
+async function uploadToGeminiFilesAPI(
+  buffer: Buffer,
+  mimeType: string,
+  displayName: string,
+  apiKey: string
+): Promise<{ uri: string; name: string }> {
+  // BƯỚC 1: Khởi tạo Resumable Upload
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': buffer.length.toString(),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        file: { display_name: displayName }
+      })
+    }
+  );
+
+  if (!initRes.ok) {
+    const errorText = await initRes.text();
+    throw new Error(`Khởi tạo tải file lên Gemini thất bại: ${initRes.statusText} - ${errorText}`);
+  }
+
+  const uploadUrl = initRes.headers.get('x-goog-upload-url');
+  if (!uploadUrl) {
+    throw new Error('Không nhận được đường dẫn tải lên từ Gemini API');
+  }
+
+  // BƯỚC 2: Tải dữ liệu nhị phân của tệp lên
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'X-Goog-Upload-Command': 'upload, finalize',
+      'X-Goog-Upload-Offset': '0',
+      'Content-Length': buffer.length.toString()
+    },
+    body: buffer as any
+  });
+
+  if (!uploadRes.ok) {
+    const errorText = await uploadRes.text();
+    throw new Error(`Đẩy dữ liệu tệp lên Gemini thất bại: ${uploadRes.statusText} - ${errorText}`);
+  }
+
+  const data = await uploadRes.json();
+  const fileUri = data.file?.uri;
+  const fileName = data.file?.name; // e.g. "files/..."
+  
+  if (!fileUri || !fileName) {
+    throw new Error('Gemini không trả về đường dẫn tệp sau khi tải lên thành công');
+  }
+
+  // BƯỚC 3: Polling trạng thái chờ file sang ACTIVE (thường chỉ dùng với các tệp nặng)
+  let state = data.file?.state || 'ACTIVE';
+  let attempts = 0;
+  while (state === 'PROCESSING' && attempts < 10) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    attempts++;
+    const checkRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`,
+      { method: 'GET' }
+    );
+    if (checkRes.ok) {
+      const checkData = await checkRes.json();
+      state = checkData.state || 'ACTIVE';
+      if (state === 'FAILED') {
+        throw new Error('Quá trình xử lý tệp tin trên máy chủ Gemini thất bại');
+      }
+    }
+  }
+
+  return { uri: fileUri, name: fileName };
 }
