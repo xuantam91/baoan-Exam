@@ -91,6 +91,7 @@ export async function updateDraftQuestion(
     correct_answer: string;
     explanation?: string;
     difficulty: string;
+    image_url?: string | null;
   }
 ) {
   try {

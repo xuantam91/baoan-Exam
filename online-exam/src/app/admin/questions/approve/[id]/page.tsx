@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getQuestionBatch, getQuestionsByBatch, updateDraftQuestion, approveQuestionBatch, deleteQuestionBatch } from '@/app/actions/question_batches';
 import { deleteQuestion } from '@/app/actions/questions';
 import { LatexRenderer } from '@/components/LatexRenderer';
+import { supabase } from '@/lib/supabase';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -18,7 +19,8 @@ import {
   HelpCircle, 
   Info,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default function ApproveBatchPage() {
@@ -41,6 +43,8 @@ export default function ApproveBatchPage() {
   const [editContent, setEditContent] = useState('');
   const [editDifficulty, setEditDifficulty] = useState('Medium');
   const [editExplanation, setEditExplanation] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   
   // Options states for editing
   const [editOptionsMC, setEditOptionsMC] = useState({ A: '', B: '', C: '', D: '' });
@@ -98,6 +102,7 @@ export default function ApproveBatchPage() {
     setEditContent(q.content);
     setEditDifficulty(q.difficulty);
     setEditExplanation(q.explanation || '');
+    setEditImageUrl(q.image_url || '');
 
     if (q.question_type === 'MultipleChoice') {
       setEditOptionsMC({
@@ -134,6 +139,43 @@ export default function ApproveBatchPage() {
     }
   }
 
+  // Handle image upload to Supabase Storage
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, id: string) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImageId(id);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `question_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('question-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('question-images')
+        .getPublicUrl(filePath);
+
+      setEditImageUrl(publicUrl);
+    } catch (err: any) {
+      console.error('Lỗi tải ảnh lên:', err);
+      alert(`Không thể tải ảnh lên: ${err.message}`);
+    } finally {
+      setUploadingImageId(null);
+    }
+  }
+
+  function handleRemoveImage() {
+    setEditImageUrl('');
+  }
+
   // Save the edited question
   async function handleSaveEdit(id: string, type: string) {
     setSaveLoadingId(id);
@@ -158,7 +200,8 @@ export default function ApproveBatchPage() {
       difficulty: editDifficulty,
       explanation: editExplanation,
       options: finalOptions,
-      correct_answer: finalCorrectAnswer
+      correct_answer: finalCorrectAnswer,
+      image_url: editImageUrl || null
     });
 
     if (res.success && res.data) {
@@ -427,19 +470,79 @@ export default function ApproveBatchPage() {
                   <div className="p-5 space-y-4">
                     {/* Content Display / Input */}
                     {isEditing ? (
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400">NỘI DUNG CÂU HỎI (HỖ TRỢ LATEX)</label>
-                        <textarea
-                          rows={3}
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border bg-transparent text-sm focus:ring-1 focus:ring-indigo-500 font-mono"
-                          style={{ borderColor: 'hsl(var(--border))' }}
-                        />
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-400">NỘI DUNG CÂU HỎI (HỖ TRỢ LATEX)</label>
+                          <textarea
+                            rows={3}
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border bg-transparent text-sm focus:ring-1 focus:ring-indigo-500 font-mono"
+                            style={{ borderColor: 'hsl(var(--border))' }}
+                          />
+                        </div>
+
+                        {/* Edit Image URL & File Upload */}
+                        {editImageUrl ? (
+                          <div className="relative inline-block my-2 group">
+                            <img
+                              src={editImageUrl}
+                              alt="Minh họa câu hỏi"
+                              className="max-w-xs max-h-[180px] object-contain rounded border p-1 bg-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleRemoveImage}
+                              className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-500 text-white rounded-full transition-all shadow-md cursor-pointer"
+                              title="Xóa ảnh"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-1 pt-1">
+                            <label className="text-[10px] font-bold text-slate-400 block">ẢNH MINH HỌA</label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e, q.id)}
+                                disabled={uploadingImageId === q.id}
+                                className="hidden"
+                                id={`image-upload-${q.id}`}
+                              />
+                              <label
+                                htmlFor={`image-upload-${q.id}`}
+                                className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg border border-dashed hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-500 cursor-pointer transition-all"
+                              >
+                                {uploadingImageId === q.id ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải lên...
+                                  </>
+                                ) : (
+                                  <>
+                                    <ImageIcon className="w-3.5 h-3.5" /> Chọn ảnh tải lên
+                                  </>
+                                )}
+                              </label>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="text-sm font-bold leading-relaxed text-slate-800 dark:text-slate-100">
-                        <LatexRenderer text={q.content} />
+                      <div className="space-y-3">
+                        <div className="text-sm font-bold leading-relaxed text-slate-800 dark:text-slate-100">
+                          <LatexRenderer text={q.content} />
+                        </div>
+                        {q.image_url && (
+                          <div className="my-3">
+                            <img
+                              src={q.image_url}
+                              alt="Hình minh họa"
+                              className="max-w-md max-h-[250px] object-contain rounded border border-slate-200 dark:border-slate-800 bg-white p-1"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 
