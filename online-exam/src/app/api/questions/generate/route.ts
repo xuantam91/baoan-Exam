@@ -153,9 +153,12 @@ ${documentText}`;
           const text = buffer.toString('utf-8');
           combinedText += `\n--- Nội dung tệp: ${file.name} ---\n${text}\n`;
         } else {
-          // Xử lý các định dạng Office khác (PDF, DOCX, PPTX, XLSX) thông qua officeparser
+          // Xử lý các định dạng Office khác (PDF, DOCX, PPTX, XLSX) thông qua officeparser v6+ AST
           try {
-            const text = await (officeParser as any).parseRawAsync(buffer);
+            const fileTypeHint = file.name.split('.').pop() || '';
+            const ast = await (officeParser as any).parseOffice(buffer, { fileType: fileTypeHint });
+            const textContent = await ast.to('text');
+            const text = typeof textContent === 'string' ? textContent : (textContent?.value || '');
             combinedText += `\n--- Nội dung tệp: ${file.name} ---\n${text}\n`;
           } catch (e: any) {
             console.error(`Lỗi phân tích tệp ${file.name} bằng officeparser:`, e);
