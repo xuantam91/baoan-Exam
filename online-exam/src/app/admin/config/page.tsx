@@ -15,7 +15,10 @@ import {
   createLesson,
   deleteLesson,
   getSystemSettings,
-  updateSystemSettings
+  updateSystemSettings,
+  getGrades,
+  createGrade,
+  deleteGrade
 } from '@/app/actions/metadata';
 import { 
   BookOpen, 
@@ -31,6 +34,7 @@ import {
   Link as LinkIcon,
   Save,
   CheckCircle,
+  GraduationCap,
 } from 'lucide-react';
 
 export default function ConfigPage() {
@@ -83,6 +87,13 @@ export default function ConfigPage() {
   const [subDesc, setSubDesc] = useState('');
   const [className, setClassName] = useState('');
   const [classGrade, setClassGrade] = useState('10');
+  
+  // Grade management states
+  const [grades, setGrades] = useState<string[]>([]);
+  const [loadingGrades, setLoadingGrades] = useState(true);
+  const [gradeName, setGradeName] = useState('');
+  const [gradeError, setGradeError] = useState('');
+  const [gradeSubmitting, setGradeSubmitting] = useState(false);
   
   const [subError, setSubError] = useState('');
   const [classError, setClassError] = useState('');
@@ -195,9 +206,53 @@ export default function ConfigPage() {
   };
 
   useEffect(() => {
+    loadGrades();
     loadSubjects();
     loadClasses();
   }, []);
+
+  const loadGrades = async () => {
+    setLoadingGrades(true);
+    const res = await getGrades();
+    if (res.success && res.data) {
+      setGrades(res.data);
+      if (res.data.length > 0) {
+        if (!classGrade || !res.data.includes(classGrade)) setClassGrade(res.data[0]);
+        if (!curriculumGrade || !res.data.includes(curriculumGrade)) setCurriculumGrade(res.data[0]);
+      }
+    }
+    setLoadingGrades(false);
+  };
+
+  const handleAddGrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gradeName.trim()) {
+      setGradeError('Vui lòng nhập tên/số khối lớp.');
+      return;
+    }
+    setGradeError('');
+    setGradeSubmitting(true);
+    const res = await createGrade(gradeName.trim());
+    if (res.success && res.data) {
+      setGradeName('');
+      setGrades(res.data);
+    } else {
+      setGradeError(res.error || 'Lỗi khi thêm khối lớp.');
+    }
+    setGradeSubmitting(false);
+  };
+
+  const handleDeleteGrade = async (gName: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa khối lớp "${gName}" khỏi danh sách?`)) {
+      return;
+    }
+    const res = await deleteGrade(gName);
+    if (res.success && res.data) {
+      setGrades(res.data);
+    } else {
+      alert(`Lỗi khi xóa khối: ${res.error}`);
+    }
+  };
 
   const loadSubjects = async () => {
     setLoadingSubjects(true);
@@ -284,11 +339,83 @@ export default function ConfigPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Cấu Hình Danh Mục</h1>
         <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">
-          Thiết lập danh sách Môn học và Lớp học cho hệ thống.
+          Thiết lập danh sách Khối lớp, Môn học và Lớp học cho hệ thống.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        {/* Grades Panel */}
+        <div className="space-y-6">
+          <div className="card-el p-6 shadow-sm">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              Quản lý Khối Lớp
+            </h2>
+            
+            <form onSubmit={handleAddGrade} className="space-y-4 mb-6">
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">Số/Tên khối mới *</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: 6, 7, 10, 11, 12"
+                  value={gradeName}
+                  onChange={(e) => setGradeName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+              
+              {gradeError && <p className="text-xs text-rose-500 font-medium">{gradeError}</p>}
+              
+              <button
+                type="submit"
+                disabled={gradeSubmitting}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                {gradeSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Thêm Khối Lớp
+              </button>
+            </form>
+
+            <hr className="border-slate-200 dark:border-slate-800 my-4" />
+
+            {/* List */}
+            {loadingGrades ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : grades.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-10">Chưa có khối lớp nào.</p>
+            ) : (
+              <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-lg">
+                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-500">Tên khối</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-500">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {grades.map((g) => (
+                      <tr key={g} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
+                        <td className="px-4 py-3 font-medium">Khối {g}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleDeleteGrade(g)}
+                            className="p-1 text-slate-400 hover:text-rose-500 rounded transition-colors cursor-pointer"
+                            title="Xóa khối lớp"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
         
         {/* Subjects Panel */}
         <div className="space-y-6">
@@ -403,9 +530,9 @@ export default function ConfigPage() {
                     onChange={(e) => setClassGrade(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
                   >
-                    <option value="10">Khối 10</option>
-                    <option value="11">Khối 11</option>
-                    <option value="12">Khối 12</option>
+                    {grades.map((g) => (
+                      <option key={g} value={g}>Khối {g}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -494,9 +621,9 @@ export default function ConfigPage() {
               onChange={(e) => setCurriculumGrade(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
             >
-              <option value="10">Khối 10</option>
-              <option value="11">Khối 11</option>
-              <option value="12">Khối 12</option>
+              {grades.map((g) => (
+                <option key={g} value={g}>Khối {g}</option>
+              ))}
             </select>
           </div>
         </div>

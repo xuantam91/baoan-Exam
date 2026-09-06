@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getSubjects, getChapters, getLessons, getSystemSettings, updateSystemSettings } from '@/app/actions/metadata';
+import { getSubjects, getChapters, getLessons, getSystemSettings, updateSystemSettings, getGrades } from '@/app/actions/metadata';
 import { createQuestionBatch, getQuestionBatches, deleteQuestionBatch, verifyGeminiKey } from '@/app/actions/question_batches';
 import { 
   Sparkles, 
@@ -32,6 +32,7 @@ export default function GenerateQuestionsPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [chapters, setChapters] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
+  const [gradesList, setGradesList] = useState<string[]>(['10', '11', '12']);
   
   // Selection states
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -150,6 +151,10 @@ export default function GenerateQuestionsPage() {
       const subRes = await getSubjects();
       if (subRes.success && subRes.data) {
         setSubjects(subRes.data);
+      }
+      const gradeRes = await getGrades();
+      if (gradeRes.success && gradeRes.data) {
+        setGradesList(gradeRes.data);
       }
       setLoadingMetadata(false);
 
@@ -481,7 +486,7 @@ export default function GenerateQuestionsPage() {
                     style={{ borderColor: 'hsl(var(--border))' }}
                   >
                     <option value="" disabled>-- Chọn khối lớp --</option>
-                    {['10', '11', '12'].map(g => (
+                    {gradesList.map(g => (
                       <option key={g} value={g}>Khối {g}</option>
                     ))}
                   </select>

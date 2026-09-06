@@ -248,3 +248,85 @@ export async function updateSystemSettings(key: string, value: any) {
     return { success: false, error: error.message };
   }
 }
+
+/* ── Grades / Khối Lớp Management Actions ────────────────────────────── */
+const DEFAULT_GRADES = ['10', '11', '12'];
+
+export async function getGrades() {
+  try {
+    const res = await getSystemSettings('grades');
+    let customGrades: string[] = DEFAULT_GRADES;
+    if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+      customGrades = res.data;
+    }
+
+    const { data: classData } = await supabase.from('classes').select('grade');
+    const classGrades = (classData || []).map(c => c.grade).filter(Boolean);
+    const combinedSet = new Set([...customGrades, ...classGrades]);
+
+    const sorted = Array.from(combinedSet).sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+
+    return { success: true, data: sorted };
+  } catch (error: any) {
+    console.error('getGrades error:', error);
+    return { success: true, data: DEFAULT_GRADES };
+  }
+}
+
+export async function createGrade(name: string) {
+  try {
+    const cleanName = name.trim();
+    if (!cleanName) return { success: false, error: 'Tên khối lớp không được để trống.' };
+
+    const res = await getGrades();
+    const currentGrades: string[] = res.data || DEFAULT_GRADES;
+
+    if (currentGrades.includes(cleanName)) {
+      return { success: false, error: 'Khối lớp này đã tồn tại trong hệ thống.' };
+    }
+
+    const updated = [...currentGrades, cleanName].sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+
+    const updateRes = await updateSystemSettings('grades', updated);
+    if (!updateRes.success) throw new Error(updateRes.error);
+
+    revalidatePath('/admin/config');
+    revalidatePath('/admin/questions');
+    revalidatePath('/admin/questions/generate');
+    revalidatePath('/admin/exams');
+    return { success: true, data: updated };
+  } catch (error: any) {
+    console.error('createGrade error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteGrade(name: string) {
+  try {
+    const res = await getGrades();
+    const currentGrades: string[] = res.data || DEFAULT_GRADES;
+
+    const updated = currentGrades.filter(g => g !== name);
+    const updateRes = await updateSystemSettings('grades', updated);
+    if (!updateRes.success) throw new Error(updateRes.error);
+
+    revalidatePath('/admin/config');
+    revalidatePath('/admin/questions');
+    revalidatePath('/admin/questions/generate');
+    revalidatePath('/admin/exams');
+    return { success: true, data: updated };
+  } catch (error: any) {
+    console.error('deleteGrade error:', error);
+    return { success: false, error: error.message };
+  }
+}

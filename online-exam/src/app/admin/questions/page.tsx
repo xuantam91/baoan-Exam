@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { getSubjects, getChapters, getLessons } from '@/app/actions/metadata';
+import { getSubjects, getChapters, getLessons, getGrades } from '@/app/actions/metadata';
 import { getQuestions, createQuestion, updateQuestion, deleteQuestion } from '@/app/actions/questions';
 import { LatexRenderer } from '@/components/LatexRenderer';
 import { 
@@ -28,6 +28,8 @@ export default function QuestionsPage() {
   
   const [loading, setLoading] = useState(true);
   const [subjectsLoading, setSubjectsLoading] = useState(true);
+
+  const [gradesList, setGradesList] = useState<string[]>(['10', '11', '12']);
 
   // Filter states
   const [subjectFilter, setSubjectFilter] = useState('all');
@@ -156,7 +158,18 @@ export default function QuestionsPage() {
   useEffect(() => {
     loadSubjects();
     loadQuestions();
+    loadGradesList();
   }, []);
+
+  const loadGradesList = async () => {
+    const res = await getGrades();
+    if (res.success && res.data) {
+      setGradesList(res.data);
+      if (res.data.length > 0 && !res.data.includes(formGrade)) {
+        setFormGrade(res.data[0]);
+      }
+    }
+  };
 
   const loadSubjects = async () => {
     setSubjectsLoading(true);
@@ -489,9 +502,9 @@ export default function QuestionsPage() {
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
             >
               <option value="all">Tất cả khối lớp</option>
-              <option value="10">Khối 10</option>
-              <option value="11">Khối 11</option>
-              <option value="12">Khối 12</option>
+              {gradesList.map((g) => (
+                <option key={g} value={g}>Khối {g}</option>
+              ))}
             </select>
           </div>
 
@@ -673,9 +686,9 @@ export default function QuestionsPage() {
                     onChange={(e) => handleFormSubjectGradeChange(formSubjectId, e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
                   >
-                    <option value="10">Khối 10</option>
-                    <option value="11">Khối 11</option>
-                    <option value="12">Khối 12</option>
+                    {gradesList.map((g) => (
+                      <option key={g} value={g}>Khối {g}</option>
+                    ))}
                   </select>
                 </div>
 
