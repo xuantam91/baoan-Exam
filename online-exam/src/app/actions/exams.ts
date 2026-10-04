@@ -233,6 +233,8 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
+import { reorderQuestionOptions } from '@/lib/variant-utils';
+
 export async function generateAndSaveVariants(
   examId: string, 
   questionIds: string[], 
@@ -265,9 +267,15 @@ export async function generateAndSaveVariants(
         const q = qMap.get(qId);
         if (!q) continue;
 
-        if (q.question_type === 'MultipleChoice' && Array.isArray(q.options) && q.options.length > 0) {
-          const count = q.options.length;
-          const defaultIndices = Array.from({ length: count }, (_, i) => i);
+        let optionCount = 0;
+        if (Array.isArray(q.options)) {
+          optionCount = q.options.length;
+        } else if (q.options && typeof q.options === 'object') {
+          optionCount = Object.keys(q.options).length;
+        }
+
+        if (q.question_type === 'MultipleChoice' && optionCount > 0) {
+          const defaultIndices = Array.from({ length: optionCount }, (_, i) => i);
           const shuffledIndices = (isShuffled && v > 0) ? shuffleArray(defaultIndices) : defaultIndices;
 
           optionOrders[qId] = shuffledIndices;
@@ -318,6 +326,29 @@ export async function generateAndSaveVariants(
     await supabase.from('exam_variants').insert(variantsToInsert);
   } catch (err) {
     console.error('generateAndSaveVariants error:', err);
+  }
+}
+
+export async function regenerateExamVariants(examId: string) {
+  try {
+    const { data: exam, error } = await supabase
+      .from('exams')
+      .select('id, question_ids, num_variants, is_shuffled')
+      .eq('id', examId)
+      .single();
+
+    if (error || !exam) throw new Error('Không tìm thấy đề thi');
+
+    await generateAndSaveVariants(
+      exam.id, 
+      exam.question_ids, 
+      exam.num_variants || 1, 
+      exam.is_shuffled || false
+    );
+    return { success: true };
+  } catch (err: any) {
+    console.error('regenerateExamVariants error:', err);
+    return { success: false, error: err.message };
   }
 }
 
@@ -416,9 +447,8 @@ export async function getExamForStudent(examId: string, studentId?: string) {
       const { correct_answer, ...rest } = q;
 
       let reorderedOptions = q.options;
-      if (optionOrders && optionOrders[q.id] && Array.isArray(q.options)) {
-        const permutation = optionOrders[q.id];
-        reorderedOptions = permutation.map((origIdx: number) => q.options[origIdx]).filter(Boolean);
+      if (optionOrders && optionOrders[q.id]) {
+        reorderedOptions = reorderQuestionOptions(q.options, optionOrders[q.id]);
       }
 
       return {
@@ -497,9 +527,8 @@ export async function getExamVariantDetails(examId: string, variantCode: string)
       if (!q) return null;
 
       let reorderedOptions = q.options;
-      if (variant.option_orders && variant.option_orders[q.id] && Array.isArray(q.options)) {
-        const permutation = variant.option_orders[q.id];
-        reorderedOptions = permutation.map((origIdx: number) => q.options[origIdx]).filter(Boolean);
+      if (variant.option_orders && variant.option_orders[q.id]) {
+        reorderedOptions = reorderQuestionOptions(q.options, variant.option_orders[q.id]);
       }
 
       const variantCorrectAns = variant.answer_key[q.id] || q.correct_answer;

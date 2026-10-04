@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { getSubmissionDetails } from '@/app/actions/submissions'; // retrieves exam + questions sorted
+import { regenerateExamVariants } from '@/app/actions/exams';
+import { reorderQuestionOptions } from '@/lib/variant-utils';
 import { LatexRenderer } from '@/components/LatexRenderer';
 import { Loader2, Printer, ArrowLeft, Download, FileText } from 'lucide-react';
 
@@ -337,9 +339,29 @@ export default function ExamPrintPage() {
           .eq('exam_id', examId)
           .order('variant_code', { ascending: true });
 
-        if (vData && vData.length > 0) {
-          setVariants(vData);
+        let activeVariants = vData || [];
+
+        // Check if exam is shuffled but variants need regeneration (e.g. created prior to option-scrambling update)
+        const needsRegen = examData.is_shuffled && (
+          !activeVariants || 
+          activeVariants.length === 0 || 
+          (activeVariants.length > 1 && activeVariants.slice(1).every((v: any) => {
+            const orders = Object.values(v.option_orders || {});
+            return orders.length > 0 && orders.every((arr: any) => Array.isArray(arr) && arr[0] === 0 && arr[1] === 1 && arr[2] === 2 && arr[3] === 3);
+          }))
+        );
+
+        if (needsRegen) {
+          await regenerateExamVariants(examId);
+          const { data: refreshedVData } = await supabase
+            .from('exam_variants')
+            .select('*')
+            .eq('exam_id', examId)
+            .order('variant_code', { ascending: true });
+          if (refreshedVData) activeVariants = refreshedVData;
         }
+
+        setVariants(activeVariants);
 
         // Sort questions in original order
         const sorted = examData.question_ids.map((id: string) => 
@@ -416,7 +438,7 @@ export default function ExamPrintPage() {
           <div className="space-y-3 pl-4 border-l border-black">
             <p>Số báo danh: ...........................................................................</p>
             <p>Phòng thi: ................................................................................</p>
-            <p>Mã đề thi: <strong className="text-base">{exam.id.substring(0, 4).toUpperCase()}</strong></p>
+            <p>Mã đề thi: <strong className="text-base">{selectedVariantCode !== 'all' ? selectedVariantCode : (variants[0]?.variant_code || exam.id.substring(0, 4).toUpperCase())}</strong></p>
           </div>
         </div>
 
@@ -579,7 +601,7 @@ export default function ExamPrintPage() {
             <div className="space-y-3 pl-4 border-l border-black">
               <p>Số báo danh: ...........................................................................</p>
               <p>Phòng thi: ................................................................................</p>
-              <p>Mã đề thi: <strong className="text-base">{exam.id.substring(0, 4).toUpperCase()}</strong></p>
+              <p>Mã đề thi: <strong className="text-base">{selectedVariantCode !== 'all' ? selectedVariantCode : (variants[0]?.variant_code || exam.id.substring(0, 4).toUpperCase())}</strong></p>
             </div>
           </div>
 
@@ -795,6 +817,176 @@ export default function ExamPrintPage() {
     );
   };
 
+  const renderSingleExamVariant = (variant: any, keyPrefix = '') => {
+    const currentVariantCode = variant ? variant.variant_code : (exam.id ? exam.id.substring(0, 4).toUpperCase() : '101');
+    const targetQIds = variant?.question_ids || exam.question_ids || [];
+    const variantQuestions = targetQIds.map((qId: string) => {
+      const q = questions.find((item: any) => item.id === qId);
+      if (!q) return null;
+      let reorderedOpts = q.options;
+      if (variant?.option_orders?.[q.id]) {
+        reorderedOpts = reorderQuestionOptions(q.options, variant.option_orders[q.id]);
+      }
+      return {
+        ...q,
+        options: reorderedOpts
+      };
+    }).filter(Boolean);
+
+    return (
+      <div key={keyPrefix || currentVariantCode} className="space-y-6">
+        {/* Exam Header */}
+        <div className="grid grid-cols-2 gap-4 border-b-2 border-black pb-4 mb-6 text-center text-sm font-sans uppercase">
+          <div className="space-y-1">
+            <h4 className="font-bold">TRƯỜNG THPT CHUYÊN THI CỬ</h4>
+            <h5>ĐỀ THI KHẢO SÁT CHẤT LƯỢNG</h5>
+            <p className="font-bold text-xs bg-slate-100 py-0.5 border border-black inline-block px-3">
+              MÃ ĐỀ THI: {currentVariantCode}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <h4 className="font-bold">KỲ THI TRẮC NGHIỆM TRỰC TUYẾN</h4>
+            <h5>MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade}</h5>
+            <p className="text-xs">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
+          </div>
+        </div>
+
+        {/* Student Identity Boxes */}
+        <div className="border border-black p-4 rounded mb-8 grid grid-cols-3 gap-4 text-sm font-sans">
+          <div className="col-span-2">
+            Họ và tên thí sinh: ............................................................................
+          </div>
+          <div>
+            Lớp: .............................
+          </div>
+          <div className="col-span-2">
+            Số báo danh / Email: ......................................................................
+          </div>
+          <div>
+            Phòng thi: .....................
+          </div>
+        </div>
+
+        {/* Exam Instruction */}
+        <div className="text-xs italic mb-6 text-center font-sans border-b border-dashed border-slate-300 pb-4">
+          (Đề thi gồm {variantQuestions.length} câu hỏi. Thí sinh trả lời trực tiếp vào tờ phiếu hoặc làm bài tự luận theo yêu cầu)
+        </div>
+
+        {/* Questions Listing */}
+        <div className="space-y-8 font-serif leading-relaxed text-sm">
+          {variantQuestions.map((q: any, idx: number) => {
+            const isFirstOfType = idx === 0 || variantQuestions[idx - 1]?.question_type !== q.question_type;
+            let sectionHeader = null;
+            if (isFirstOfType) {
+              if (q.question_type === 'MultipleChoice') {
+                sectionHeader = (
+                  <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider">
+                    PHẦN I. Câu hỏi trắc nghiệm nhiều lựa chọn
+                  </div>
+                );
+              } else if (q.question_type === 'TrueFalse') {
+                sectionHeader = (
+                  <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
+                    PHẦN II. Câu hỏi trắc nghiệm Đúng/Sai
+                  </div>
+                );
+              } else if (q.question_type === 'FillIn') {
+                sectionHeader = (
+                  <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
+                    PHẦN III. Câu hỏi trắc nghiệm trả lời ngắn (Điền đáp án)
+                  </div>
+                );
+              } else if (q.question_type === 'Essay') {
+                sectionHeader = (
+                  <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
+                    PHẦN IV. Câu hỏi tự luận
+                  </div>
+                );
+              }
+            }
+
+            return (
+              <div key={q.id} className="space-y-3">
+                {sectionHeader}
+                
+                {/* Content */}
+                <div className="flex gap-1.5 items-start">
+                  <span className="font-bold shrink-0">Câu {idx + 1}:</span>
+                  <div>
+                    <LatexRenderer text={q.content} />
+                  </div>
+                </div>
+
+                {/* Image URL if present */}
+                {q.image_url && (
+                  <div className="pl-6 py-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={q.image_url} 
+                      alt={`Hình minh họa Câu ${idx+1}`} 
+                      className="max-h-60 max-w-full rounded object-contain border border-slate-200" 
+                    />
+                  </div>
+                )}
+
+                {/* Dynamic options layout by type */}
+                {q.question_type === 'MultipleChoice' && q.options && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pl-6 font-sans text-xs">
+                    {Object.keys(q.options).sort().map(key => (
+                      <div key={key} className="flex items-start gap-1">
+                        <span className="font-bold">{key}.</span>
+                        <div>{q.options[key]}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {q.question_type === 'TrueFalse' && q.options && (
+                  <div className="pl-6 space-y-2 font-sans text-xs">
+                    <p className="italic text-slate-500 mb-1">(Hãy chọn Đúng (Đ) hoặc Sai (S) cho mỗi mệnh đề sau:)</p>
+                    {Object.keys(q.options).sort().map(key => (
+                      <div key={key} className="flex justify-between items-start border border-dashed border-slate-200 p-2 rounded max-w-2xl">
+                        <div className="flex gap-2">
+                          <span className="font-bold uppercase text-indigo-600">{key}.</span>
+                          <span>{q.options[key]}</span>
+                        </div>
+                        <div className="flex gap-4 shrink-0 font-bold ml-4">
+                          <span>[ ] Đúng</span>
+                          <span>[ ] Sai</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {q.question_type === 'FillIn' && (
+                  <div className="pl-6 font-sans text-xs text-slate-500">
+                    <span>Đáp án của thí sinh: ............................................................................................</span>
+                  </div>
+                )}
+
+                {q.question_type === 'Essay' && (
+                  <div className="pl-6 font-sans text-xs text-slate-500 italic space-y-1">
+                    <p>(Học sinh làm bài tự luận chi tiết vào tờ giấy thi riêng)</p>
+                    <div className="border border-dashed border-slate-200 h-28 rounded max-w-3xl flex items-center justify-center">
+                      (Vùng dành cho lời giải tự luận của thí sinh)
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Exam Footer */}
+        <div className="mt-16 pt-6 border-t border-black text-center text-xs font-sans text-slate-500">
+          <p className="text-center" style={{ textAlign: 'center' }}>------ HẾT ------</p>
+          <p className="mt-1 font-semibold text-center" style={{ textAlign: 'center' }}>Cán bộ coi thi không giải thích gì thêm.</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-white text-black p-8 max-w-4xl mx-auto font-serif selection:bg-slate-100">
       
@@ -875,155 +1067,17 @@ export default function ExamPrintPage() {
         {printType === 'sheet' && renderAnswerSheet()}
         {printType === 'key' && renderAnswerKey()}
         {printType === 'questions' && (
-          <>
-            {/* Exam Header */}
-            <div className="grid grid-cols-2 gap-4 border-b-2 border-black pb-4 mb-6 text-center text-sm font-sans uppercase">
-              <div className="space-y-1">
-                <h4 className="font-bold">TRƯỜNG THPT CHUYÊN THI CỬ</h4>
-                <h5>ĐỀ THI KHẢO SÁT CHẤT LƯỢNG</h5>
-                <p className="font-bold text-xs">Mã đề thi: {exam.id.substring(0, 4).toUpperCase()}</p>
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-bold">KỲ THI TRẮC NGHIỆM TRỰC TUYẾN</h4>
-                <h5>MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade}</h5>
-                <p className="text-xs">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
-              </div>
+          selectedVariantCode === 'all' && variants.length > 0 ? (
+            <div className="space-y-12">
+              {variants.map((v, vIdx) => (
+                <div key={v.id || vIdx} className={vIdx > 0 ? "page-break pt-8 border-t-4 border-dashed border-slate-300 print:border-none" : ""}>
+                  {renderSingleExamVariant(v, `variant-${v.variant_code}`)}
+                </div>
+              ))}
             </div>
-
-            {/* Student Identity Boxes */}
-            <div className="border border-black p-4 rounded mb-8 grid grid-cols-3 gap-4 text-sm font-sans">
-              <div className="col-span-2">
-                Họ và tên thí sinh: ............................................................................
-              </div>
-              <div>
-                Lớp: .............................
-              </div>
-              <div className="col-span-2">
-                Số báo danh / Email: ......................................................................
-              </div>
-              <div>
-                Phòng thi: .....................
-              </div>
-            </div>
-
-            {/* Exam Instruction */}
-            <div className="text-xs italic mb-6 text-center font-sans border-b border-dashed border-slate-300 pb-4">
-              (Đề thi gồm {questions.length} câu hỏi. Thí sinh trả lời trực tiếp vào tờ phiếu hoặc làm bài tự luận theo yêu cầu)
-            </div>
-
-            {/* Questions Listing */}
-            <div className="space-y-8 font-serif leading-relaxed text-sm">
-            {questions.map((q, idx) => {
-              const isFirstOfType = idx === 0 || questions[idx - 1].question_type !== q.question_type;
-              let sectionHeader = null;
-              if (isFirstOfType) {
-                if (q.question_type === 'MultipleChoice') {
-                  sectionHeader = (
-                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider">
-                      PHẦN I. Câu hỏi trắc nghiệm nhiều lựa chọn
-                    </div>
-                  );
-                } else if (q.question_type === 'TrueFalse') {
-                  sectionHeader = (
-                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
-                      PHẦN II. Câu hỏi trắc nghiệm Đúng/Sai
-                    </div>
-                  );
-                } else if (q.question_type === 'FillIn') {
-                  sectionHeader = (
-                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
-                      PHẦN III. Câu hỏi trắc nghiệm trả lời ngắn (Điền đáp án)
-                    </div>
-                  );
-                } else if (q.question_type === 'Essay') {
-                  sectionHeader = (
-                    <div className="font-sans font-bold border-b border-black pb-1 mb-4 uppercase text-xs tracking-wider mt-6">
-                      PHẦN IV. Câu hỏi tự luận
-                    </div>
-                  );
-                }
-              }
-
-              return (
-                <div key={q.id} className="space-y-3">
-                  {sectionHeader}
-                    
-                    {/* Content */}
-                    <div className="flex gap-1.5 items-start">
-                      <span className="font-bold shrink-0">Câu {idx + 1}:</span>
-                      <div>
-                        <LatexRenderer text={q.content} />
-                      </div>
-                    </div>
-
-                    {/* Image URL if present */}
-                    {q.image_url && (
-                      <div className="pl-6 py-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={q.image_url} 
-                          alt={`Hình minh họa Câu ${idx+1}`} 
-                          className="max-h-60 max-w-full rounded object-contain border border-slate-200" 
-                        />
-                      </div>
-                    )}
-
-                    {/* Dynamic options layout by type */}
-                    {q.question_type === 'MultipleChoice' && q.options && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pl-6 font-sans text-xs">
-                        {Object.keys(q.options).sort().map(key => (
-                          <div key={key} className="flex items-start gap-1">
-                            <span className="font-bold">{key}.</span>
-                            <div>{q.options[key]}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {q.question_type === 'TrueFalse' && q.options && (
-                      <div className="pl-6 space-y-2 font-sans text-xs">
-                        <p className="italic text-slate-500 mb-1">(Hãy chọn Đúng (Đ) hoặc Sai (S) cho mỗi mệnh đề sau:)</p>
-                        {Object.keys(q.options).sort().map(key => (
-                          <div key={key} className="flex justify-between items-start border border-dashed border-slate-200 p-2 rounded max-w-2xl">
-                            <div className="flex gap-2">
-                              <span className="font-bold uppercase text-indigo-600">{key}.</span>
-                              <span>{q.options[key]}</span>
-                            </div>
-                            <div className="flex gap-4 shrink-0 font-bold ml-4">
-                              <span>[ ] Đúng</span>
-                              <span>[ ] Sai</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {q.question_type === 'FillIn' && (
-                      <div className="pl-6 font-sans text-xs text-slate-500">
-                        <span>Đáp án của thí sinh: ............................................................................................</span>
-                      </div>
-                    )}
-
-                    {q.question_type === 'Essay' && (
-                      <div className="pl-6 font-sans text-xs text-slate-500 italic space-y-1">
-                        <p>(Học sinh làm bài tự luận chi tiết vào tờ giấy thi riêng)</p>
-                        <div className="border border-dashed border-slate-200 h-28 rounded max-w-3xl flex items-center justify-center">
-                          (Vùng dành cho lời giải tự luận của thí sinh)
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Exam Footer */}
-            <div className="mt-16 pt-6 border-t border-black text-center text-xs font-sans text-slate-500">
-              <p className="text-center" style={{ textAlign: 'center' }}>------ HẾT ------</p>
-              <p className="mt-1 font-semibold text-center" style={{ textAlign: 'center' }}>Cán bộ coi thi không giải thích gì thêm.</p>
-            </div>
-          </>
+          ) : (
+            renderSingleExamVariant(variants.find(v => v.variant_code === selectedVariantCode) || variants[0] || null)
+          )
         )}
       </div>
 
