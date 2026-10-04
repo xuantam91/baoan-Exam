@@ -320,3 +320,14 @@ html:not(.dark) .text-pink-600 { color: #DB2777; }
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in { animation: fade-in 0.22s ease-out both; }
+
+/* ==========================================================
+   PRINT STYLES
+   ========================================================== */
+@media print {
+  .no-print,
+  .print-hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+}

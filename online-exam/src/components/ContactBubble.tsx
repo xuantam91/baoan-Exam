@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { getSystemSettings } from '@/app/actions/metadata';
 import { Phone, X, ArrowUp, Bot, Sparkles } from 'lucide-react';
 
@@ -25,6 +26,7 @@ interface ContactInfo {
 }
 
 export default function ContactBubble() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [contacts, setContacts] = useState<ContactInfo>({
@@ -54,6 +56,10 @@ export default function ContactBubble() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  if (pathname?.includes('/print')) {
+    return null;
+  }
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -67,7 +73,7 @@ export default function ContactBubble() {
     : `https://facebook.com/${contacts.facebook}`;
 
   return (
-    <div className="fixed bottom-28 right-6 z-50 flex items-center gap-3.5 select-none">
+    <div className="fixed bottom-28 right-6 z-50 flex items-center gap-3.5 select-none print:hidden no-print">
       
       {/* ── Floating Back to Top Button (Left of contact button) ── */}
       {showScrollTop && (
