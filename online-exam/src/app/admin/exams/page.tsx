@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { getSubjects, getClasses, getChapters, getLessons } from '@/app/actions/metadata';
 import { getExams, createRandomExam, deleteExam, sendExamLinksToClass, getExamTemplates, createExamTemplate, deleteExamTemplate } from '@/app/actions/exams';
 import { getQuestionCountStats, getCurriculumQuestionCounts } from '@/app/actions/questions';
@@ -39,7 +40,7 @@ export default function ExamsPage() {
   const [formError, setFormError] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Advanced Question Constraints
+  // Advanced Question Constraints & Shuffling
   const [enableConfig, setEnableConfig] = useState(false);
   const [easyCount, setEasyCount] = useState(0);
   const [mediumCount, setMediumCount] = useState(0);
@@ -48,6 +49,14 @@ export default function ExamsPage() {
   const [tfCount, setTfCount] = useState(0);
   const [fillCount, setFillCount] = useState(0);
   const [essayCount, setEssayCount] = useState(0);
+
+  // Exam Shuffling states
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [numVariants, setNumVariants] = useState(1);
+  const [studentCountInClass, setStudentCountInClass] = useState(0);
+
+  // Send Email & Result Display Mode states
+  const [resultDisplayMode, setResultDisplayMode] = useState('show_answers');
 
   // Templates states
   const [templates, setTemplates] = useState<any[]>([]);
@@ -62,6 +71,27 @@ export default function ExamsPage() {
       setTemplates(res.data || []);
     }
   };
+
+  // Fetch student count when classId changes to auto-calculate recommended 120% variant count
+  useEffect(() => {
+    if (!classId) {
+      setStudentCountInClass(0);
+      return;
+    }
+    const fetchClassStudents = async () => {
+      const { count, error } = await supabase
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('class_id', classId);
+      if (!error && count !== null) {
+        setStudentCountInClass(count);
+        if (isShuffled && count > 0) {
+          setNumVariants(Math.max(2, Math.ceil(count * 1.20)));
+        }
+      }
+    };
+    fetchClassStudents();
+  }, [classId, isShuffled]);
 
   const handleSelectTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -392,13 +422,17 @@ export default function ExamsPage() {
       durationMinutes,
       ...configPayload,
       chapterIds: selectedChapters,
-      lessonIds: selectedLessons
+      lessonIds: selectedLessons,
+      isShuffled,
+      numVariants: isShuffled ? Math.max(1, numVariants) : 1
     });
 
     if (res.success) {
       setTitle('');
       setNumQuestions(10);
       setDurationMinutes(15);
+      setIsShuffled(false);
+      setNumVariants(1);
       // Reset config
       setEnableConfig(false);
       setEasyCount(0);
@@ -456,6 +490,7 @@ export default function ExamsPage() {
     
     setMaxAttempts(exam.max_attempts !== undefined && exam.max_attempts !== null ? exam.max_attempts : 1);
     setGradingPolicy(exam.grading_policy || 'highest');
+    setResultDisplayMode(exam.result_display_mode || 'show_answers');
     setDueModalOpen(true);
   };
 
@@ -472,7 +507,7 @@ export default function ExamsPage() {
     }
 
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const res = await sendExamLinksToClass(examId, origin, isoDueAt, maxAttempts, gradingPolicy);
+    const res = await sendExamLinksToClass(examId, origin, isoDueAt, maxAttempts, gradingPolicy, resultDisplayMode);
 
     if (res.success) {
       setEmailStatus({
@@ -664,9 +699,49 @@ export default function ExamsPage() {
                 </div>
               </div>
 
-              {/* Advanced constraints toggler */}
-              <div className="pt-2">
+              {/* Trộn đề thi (Exam Scrambling / Variants) */}
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isShuffled}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsShuffled(checked);
+                      if (checked) {
+                        const calculated = studentCountInClass > 0 ? Math.max(2, Math.ceil(studentCountInClass * 1.20)) : 4;
+                        setNumVariants(calculated);
+                      }
+                    }}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    🔀 Trộn đề thi (Xáo thứ tự câu & đáp án)
+                  </span>
+                </label>
+
+                {isShuffled && (
+                  <div className="p-3 bg-violet-50/70 dark:bg-violet-950/40 rounded-xl border border-violet-200 dark:border-violet-900/50 text-xs space-y-2 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-violet-900 dark:text-violet-200">Số lượng mã đề sinh ra:</span>
+                      <input
+                        type="number"
+                        min={2}
+                        max={50}
+                        value={numVariants}
+                        onChange={(e) => setNumVariants(parseInt(e.target.value) || 2)}
+                        className="w-20 px-2 py-1 text-center rounded border border-violet-300 dark:border-violet-800 bg-white dark:bg-slate-900 text-xs font-bold"
+                      />
+                    </div>
+                    <p className="text-[11px] text-violet-700 dark:text-violet-300 leading-tight">
+                      💡 {studentCountInClass > 0 
+                        ? `Lớp có ${studentCountInClass} học sinh. Tự động đề xuất ${Math.ceil(studentCountInClass * 1.20)} mã đề (gồm 20% dự phòng).` 
+                        : 'Mã đề sẽ tạo tự động từ 101, 102... và được phân bổ ngẫu nhiên đều cho học sinh.'}
+                    </p>
+                  </div>
+                )}
+
+                <label className="flex items-center gap-2 cursor-pointer pt-1">
                   <input
                     type="checkbox"
                     checked={enableConfig}
@@ -845,6 +920,11 @@ export default function ExamsPage() {
                         <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-400 text-xs font-semibold">
                           {exam.subjects?.name}
                         </span>
+                        {exam.is_shuffled && (
+                          <span className="px-2 py-0.5 rounded bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-400 text-xs font-semibold flex items-center gap-1">
+                            🔀 Trộn {exam.num_variants || 1} mã đề
+                          </span>
+                        )}
                         {exam.classes ? (
                           <span className="px-2 py-0.5 rounded bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-400 text-xs font-semibold">
                             Lớp {exam.classes.name} (Khối {exam.classes.grade})
@@ -1100,6 +1180,22 @@ export default function ExamsPage() {
                   </select>
                 </div>
               )}
+
+              {/* Lựa chọn Chế độ hiển thị kết quả cho học sinh */}
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-100 dark:border-slate-850 space-y-2 animate-fade-in">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase">Chế độ hiển thị kết quả sau khi nộp</label>
+                <select
+                  value={resultDisplayMode}
+                  onChange={(e) => setResultDisplayMode(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:ring-1 focus:ring-indigo-500 outline-none font-medium"
+                >
+                  <option value="show_answers">🟢 Hiện điểm + Chi tiết đáp án đúng & Lời giải</option>
+                  <option value="score_only">🔒 Chỉ báo điểm số (Ẩn đáp án đúng & lời giải)</option>
+                </select>
+                <p className="text-[10px] text-slate-400">
+                  * Khi chọn &quot;Chỉ báo điểm số&quot;, học sinh sẽ nhận được điểm tổng quan mà không thấy đáp án chi tiết để tránh lộ đề.
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">

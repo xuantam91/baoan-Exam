@@ -14,6 +14,8 @@ export default function ExamPrintPage() {
 
   const [exam, setExam] = useState<any | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [variants, setVariants] = useState<any[]>([]);
+  const [selectedVariantCode, setSelectedVariantCode] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
   const handleExportWord = () => {
@@ -329,6 +331,16 @@ export default function ExamPrintPage() {
 
         if (qError) throw qError;
 
+        const { data: vData } = await supabase
+          .from('exam_variants')
+          .select('*')
+          .eq('exam_id', examId)
+          .order('variant_code', { ascending: true });
+
+        if (vData && vData.length > 0) {
+          setVariants(vData);
+        }
+
         // Sort questions in original order
         const sorted = examData.question_ids.map((id: string) => 
           qData.find((q: any) => q.id === id)
@@ -510,6 +522,44 @@ export default function ExamPrintPage() {
   const renderAnswerKey = () => {
     return (
       <div className="space-y-6 text-black">
+        {/* MA TRẬN ĐÁP ÁN (ANSWER KEY MATRIX ACROSS ALL VARIANTS) */}
+        {variants.length > 0 && (
+          <div className="mb-8 border-2 border-black rounded-xl p-4 bg-white">
+            <h3 className="text-base font-bold text-center uppercase mb-3 border-b-2 border-black pb-2">
+              📊 MA TRẬN ĐÁP ÁN TẤT CẢ MÃ ĐỀ THI ({variants.length} Mã đề)
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse border border-black text-center font-sans">
+                <thead>
+                  <tr className="bg-slate-200 border-b border-black">
+                    <th className="border border-black p-1.5 font-bold">Câu hỏi</th>
+                    {variants.map(v => (
+                      <th key={v.id} className="border border-black p-1.5 font-bold bg-indigo-50">
+                        Mã {v.variant_code}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {questions.map((q, idx) => (
+                    <tr key={q.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                      <td className="border border-black p-1.5 font-bold">Câu {idx + 1}</td>
+                      {variants.map(v => {
+                        const keyVal = v.answer_key[q.id] || '-';
+                        return (
+                          <td key={v.id} className="border border-black p-1.5 font-extrabold text-indigo-700">
+                            {keyVal}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* PAGE 1: PRE-FILLED BUBBLE ANSWER SHEET FOR QUICK GRADING */}
         <div className="space-y-6 font-sans">
           {/* Header Title */}
@@ -783,11 +833,28 @@ export default function ExamPrintPage() {
       `}</style>
 
       {/* Floating Action Bar (Hidden during print) */}
-      <div className="no-print mb-8 p-4 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between font-sans">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+      <div className="no-print mb-8 p-4 rounded-xl bg-slate-100 border border-slate-200 flex flex-wrap items-center justify-between gap-4 font-sans">
+        <div className="flex items-center gap-3 text-sm text-slate-600">
           <ArrowLeft className="w-4 h-4 cursor-pointer" onClick={() => window.close()} />
           <span>Quay lại trang quản trị</span>
+
+          {variants.length > 0 && (
+            <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-300">
+              <span className="text-xs font-bold text-slate-700">Chọn Mã đề:</span>
+              <select
+                value={selectedVariantCode}
+                onChange={(e) => setSelectedVariantCode(e.target.value)}
+                className="px-2.5 py-1 text-xs rounded border border-slate-300 bg-white font-bold text-indigo-600"
+              >
+                <option value="all">🖨️ In tất cả mã đề ({variants.length} mã)</option>
+                {variants.map(v => (
+                  <option key={v.id} value={v.variant_code}>Mã đề {v.variant_code}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
+
         <div className="flex gap-2">
           <button
             onClick={handleExportWord}

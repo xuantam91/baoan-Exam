@@ -31,6 +31,7 @@ export default function StudentQuizPage() {
   const [exam, setExam] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [student, setStudent] = useState<any>(null);
+  const [variantCode, setVariantCode] = useState<string | null>(null);
   
   // Loading & Flow states
   const [loading, setLoading] = useState(true);
@@ -71,9 +72,12 @@ export default function StudentQuizPage() {
         }
         setStudent(stdData);
 
-        // Fetch Exam & questions (stripped of correct_answers)
-        const examRes = await getExamForStudent(examId);
+        // Fetch Exam & questions (stripped of correct_answers, applying student variant if assigned)
+        const examRes = await getExamForStudent(examId, studentId);
         if (examRes.success && examRes.exam) {
+          if (examRes.variantCode) {
+            setVariantCode(examRes.variantCode);
+          }
           // Check expiration
           if (examRes.exam.due_at && new Date() > new Date(examRes.exam.due_at)) {
             alert(`Bài thi đã hết hạn nộp lúc ${new Date(examRes.exam.due_at).toLocaleString('vi-VN')}. Bạn không thể làm bài.`);
@@ -339,6 +343,11 @@ export default function StudentQuizPage() {
             </div>
             <span className="font-bold text-sm sm:text-base hidden sm:inline">{exam?.title}</span>
             <span className="font-bold text-sm sm:hidden">Làm Bài Thi</span>
+            {variantCode && (
+              <span className="px-2 py-0.5 rounded bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-400 text-xs font-bold border border-violet-200 dark:border-violet-800 ml-1">
+                Mã đề: {variantCode}
+              </span>
+            )}
           </div>
 
           {/* Greet Student */}

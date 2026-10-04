@@ -34,7 +34,9 @@ export async function createRandomExam({
   fillCount = 0,
   essayCount = 0,
   chapterIds = [],
-  lessonIds = []
+  lessonIds = [],
+  isShuffled = false,
+  numVariants = 1
 }: {
   title: string;
   subjectId: string;
@@ -50,6 +52,8 @@ export async function createRandomExam({
   essayCount?: number;
   chapterIds?: string[];
   lessonIds?: string[];
+  isShuffled?: boolean;
+  numVariants?: number;
 }) {
   try {
     // 1. Get class grade if classId is provided
@@ -187,6 +191,8 @@ export async function createRandomExam({
       selectedIds = sortedSelected.map(q => q.id);
     }
 
+    const actualNumVariants = isShuffled ? Math.max(1, numVariants) : 1;
+
     // 4. Insert exam
     const { data, error } = await supabase
       .from('exams')
@@ -195,18 +201,123 @@ export async function createRandomExam({
         subject_id: subjectId,
         class_id: classId || null,
         duration_minutes: durationMinutes,
-        question_ids: selectedIds
+        question_ids: selectedIds,
+        is_shuffled: isShuffled,
+        num_variants: actualNumVariants
       })
       .select()
       .single();
 
     if (error) throw error;
 
+    // Generate variants
+    await generateAndSaveVariants(data.id, selectedIds, actualNumVariants, isShuffled);
+
     revalidatePath('/admin/exams');
     return { success: true, data };
   } catch (error: any) {
     console.error('createRandomExam error:', error);
     return { success: false, error: error.message };
+  }
+}
+
+// Helper: Fisher-Yates array shuffling
+function shuffleArray<T>(arr: T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+export async function generateAndSaveVariants(
+  examId: string, 
+  questionIds: string[], 
+  numVariants: number,
+  isShuffled: boolean
+) {
+  try {
+    const { data: questions, error } = await supabase
+      .from('questions')
+      .select('id, question_type, options, correct_answer')
+      .in('id', questionIds);
+
+    if (error || !questions) return;
+
+    const qMap = new Map<string, any>();
+    questions.forEach(q => qMap.set(q.id, q));
+
+    const variantsToInsert = [];
+
+    for (let v = 0; v < numVariants; v++) {
+      const variantCode = String(101 + v);
+      
+      // If isShuffled is true, scramble questions for variant (v > 0 or all)
+      const variantQIds = (isShuffled && v > 0) ? shuffleArray(questionIds) : [...questionIds];
+      
+      const optionOrders: Record<string, number[]> = {};
+      const answerKey: Record<string, string> = {};
+
+      for (const qId of variantQIds) {
+        const q = qMap.get(qId);
+        if (!q) continue;
+
+        if (q.question_type === 'MultipleChoice' && Array.isArray(q.options) && q.options.length > 0) {
+          const count = q.options.length;
+          const defaultIndices = Array.from({ length: count }, (_, i) => i);
+          const shuffledIndices = (isShuffled && v > 0) ? shuffleArray(defaultIndices) : defaultIndices;
+
+          optionOrders[qId] = shuffledIndices;
+
+          // Map correct answer letter(s)
+          if (q.correct_answer) {
+            const origAnsStr = String(q.correct_answer).trim();
+            if (origAnsStr.includes(',')) {
+              // Multi-select
+              const origLetters = origAnsStr.split(',').map(l => l.trim().toUpperCase());
+              const newLetters = origLetters.map(l => {
+                const origIdx = LETTERS.indexOf(l);
+                if (origIdx === -1) return l;
+                const newPos = shuffledIndices.indexOf(origIdx);
+                return newPos !== -1 ? LETTERS[newPos] : l;
+              }).sort().join(',');
+              answerKey[qId] = newLetters;
+            } else {
+              // Single choice
+              const origIdx = LETTERS.indexOf(origAnsStr.toUpperCase());
+              if (origIdx !== -1) {
+                const newPos = shuffledIndices.indexOf(origIdx);
+                answerKey[qId] = newPos !== -1 ? LETTERS[newPos] : origAnsStr;
+              } else {
+                answerKey[qId] = origAnsStr;
+              }
+            }
+          } else {
+            answerKey[qId] = '';
+          }
+        } else {
+          // TrueFalse, FillIn, Essay
+          optionOrders[qId] = [0, 1, 2, 3];
+          answerKey[qId] = q.correct_answer || '';
+        }
+      }
+
+      variantsToInsert.push({
+        exam_id: examId,
+        variant_code: variantCode,
+        question_ids: variantQIds,
+        option_orders: optionOrders,
+        answer_key: answerKey
+      });
+    }
+
+    await supabase.from('exam_variants').delete().eq('exam_id', examId);
+    await supabase.from('exam_variants').insert(variantsToInsert);
+  } catch (err) {
+    console.error('generateAndSaveVariants error:', err);
   }
 }
 
@@ -257,8 +368,8 @@ export async function getExamDetailsForTeacher(examId: string) {
   }
 }
 
-// Fetch exam for student (security optimization: strips correct_answer & explanation)
-export async function getExamForStudent(examId: string) {
+// Fetch exam for student (security optimization: strips correct_answer & explanation, applies variant scramble)
+export async function getExamForStudent(examId: string, studentId?: string) {
   try {
     const { data: exam, error: examError } = await supabase
       .from('exams')
@@ -268,46 +379,165 @@ export async function getExamForStudent(examId: string) {
 
     if (examError) throw examError;
 
-    // Fetch questions (include correct_answer & question_type to check is_multiselect, then strip them)
+    let targetQIds: string[] = exam.question_ids;
+    let optionOrders: Record<string, number[]> | null = null;
+    let assignedVariantCode: string | null = null;
+    let assignedVariantId: string | null = null;
+
+    // Check if student has an assigned variant
+    if (studentId) {
+      const { data: assignment } = await supabase
+        .from('student_exam_assignments')
+        .select('variant_id, exam_variants(id, variant_code, question_ids, option_orders)')
+        .eq('exam_id', examId)
+        .eq('student_id', studentId)
+        .maybeSingle();
+
+      if (assignment && assignment.exam_variants) {
+        const v = assignment.exam_variants as any;
+        targetQIds = v.question_ids;
+        optionOrders = v.option_orders;
+        assignedVariantCode = v.variant_code;
+        assignedVariantId = v.id;
+      }
+    }
+
+    // Fetch questions
     const { data: questions, error: qError } = await supabase
       .from('questions')
       .select('id, subject_id, grade, question_type, content, options, difficulty, correct_answer, image_url')
-      .in('id', exam.question_ids);
+      .in('id', targetQIds);
 
     if (qError) throw qError;
 
-    // Securely map questions (determine is_multiselect, then strip correct_answer)
+    // Map questions securely & reorder options according to optionOrders
     const secureQuestions = questions.map((q: any) => {
       const isMultiSelect = q.question_type === 'MultipleChoice' && q.correct_answer && q.correct_answer.includes(',');
       const { correct_answer, ...rest } = q;
-      return { ...rest, is_multiselect: isMultiSelect };
+
+      let reorderedOptions = q.options;
+      if (optionOrders && optionOrders[q.id] && Array.isArray(q.options)) {
+        const permutation = optionOrders[q.id];
+        reorderedOptions = permutation.map((origIdx: number) => q.options[origIdx]).filter(Boolean);
+      }
+
+      return {
+        ...rest,
+        options: reorderedOptions,
+        is_multiselect: isMultiSelect
+      };
     });
 
-    // Sort questions back to match exam.question_ids sequence
-    const sortedQuestions = exam.question_ids.map((id: string) => 
+    // Sort questions back to match targetQIds sequence
+    const sortedQuestions = targetQIds.map((id: string) => 
       secureQuestions.find((q: any) => q.id === id)
     ).filter(Boolean);
 
-    return { success: true, exam, questions: sortedQuestions };
+    return { 
+      success: true, 
+      exam, 
+      questions: sortedQuestions,
+      variantCode: assignedVariantCode,
+      variantId: assignedVariantId
+    };
   } catch (error: any) {
     console.error('getExamForStudent error:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Send Exam Link to all students in the class
+// Fetch all variants for an exam
+export async function getExamVariants(examId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('exam_variants')
+      .select('*')
+      .eq('exam_id', examId)
+      .order('variant_code', { ascending: true });
+
+    if (error) throw error;
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error('getExamVariants error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Fetch specific variant details (reordered questions & options for print)
+export async function getExamVariantDetails(examId: string, variantCode: string) {
+  try {
+    const { data: exam, error: examError } = await supabase
+      .from('exams')
+      .select('*, subjects(name), classes(name)')
+      .eq('id', examId)
+      .single();
+
+    if (examError) throw examError;
+
+    const { data: variant, error: varError } = await supabase
+      .from('exam_variants')
+      .select('*')
+      .eq('exam_id', examId)
+      .eq('variant_code', variantCode)
+      .single();
+
+    if (varError || !variant) throw new Error(`Không tìm thấy mã đề ${variantCode}`);
+
+    // Fetch questions
+    const { data: questions, error: qError } = await supabase
+      .from('questions')
+      .select('*')
+      .in('id', variant.question_ids);
+
+    if (qError) throw qError;
+
+    // Apply variant question order & option orders
+    const processedQuestions = variant.question_ids.map((qId: string) => {
+      const q = questions.find((item: any) => item.id === qId);
+      if (!q) return null;
+
+      let reorderedOptions = q.options;
+      if (variant.option_orders && variant.option_orders[q.id] && Array.isArray(q.options)) {
+        const permutation = variant.option_orders[q.id];
+        reorderedOptions = permutation.map((origIdx: number) => q.options[origIdx]).filter(Boolean);
+      }
+
+      const variantCorrectAns = variant.answer_key[q.id] || q.correct_answer;
+
+      return {
+        ...q,
+        options: reorderedOptions,
+        variant_correct_answer: variantCorrectAns
+      };
+    }).filter(Boolean);
+
+    return { 
+      success: true, 
+      exam, 
+      variant, 
+      questions: processedQuestions 
+    };
+  } catch (error: any) {
+    console.error('getExamVariantDetails error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Send Exam Link to all students in the class & assign variants
 export async function sendExamLinksToClass(
   examId: string, 
   baseUrl: string, 
   dueAt?: string | null,
   maxAttempts?: number,
-  gradingPolicy?: string
+  gradingPolicy?: string,
+  resultDisplayMode?: string
 ) {
   try {
     const updateFields: any = { is_sent: true };
     if (dueAt !== undefined) updateFields.due_at = dueAt;
     if (maxAttempts !== undefined) updateFields.max_attempts = maxAttempts;
     if (gradingPolicy !== undefined) updateFields.grading_policy = gradingPolicy;
+    if (resultDisplayMode !== undefined) updateFields.result_display_mode = resultDisplayMode;
 
     const { error: updateError } = await supabase
       .from('exams')
@@ -330,7 +560,7 @@ export async function sendExamLinksToClass(
     // 2. Fetch student list in that class
     const { data: students, error: studentsError } = await supabase
       .from('students')
-      .select('name, email')
+      .select('id, name, email')
       .eq('class_id', exam.class_id);
 
     if (studentsError) throw studentsError;
@@ -339,9 +569,29 @@ export async function sendExamLinksToClass(
       throw new Error('Lớp học này hiện chưa có học sinh nào.');
     }
 
+    // 3. Fetch variants if shuffled exam
+    const { data: variants } = await supabase
+      .from('exam_variants')
+      .select('id, variant_code')
+      .eq('exam_id', examId)
+      .order('variant_code', { ascending: true });
+
+    if (variants && variants.length > 0) {
+      const assignments = students.map((std: any, idx: number) => {
+        const assignedVariant = variants[idx % variants.length];
+        return {
+          exam_id: examId,
+          student_id: std.id,
+          variant_id: assignedVariant.id
+        };
+      });
+
+      await supabase.from('student_exam_assignments').upsert(assignments, { onConflict: 'exam_id,student_id' });
+    }
+
     const examLink = `${baseUrl}/exam/${exam.id}`;
     
-    // 3. Dispatch emails
+    // 4. Dispatch emails
     const emailPromises = students.map((student: any) => {
       const formattedDue = exam.due_at ? new Date(exam.due_at).toLocaleString('vi-VN') : 'Không giới hạn';
       const formattedAttempts = exam.max_attempts === 0 || exam.max_attempts === null ? 'Làm nhiều lần' : `${exam.max_attempts} lần`;

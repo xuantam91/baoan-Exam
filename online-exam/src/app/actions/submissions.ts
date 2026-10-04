@@ -21,15 +21,32 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
 
     if (examError) throw examError;
 
-    // 2. Fetch all full question data
+    // 2. Fetch student's assigned variant if any
+    let assignedVariant: any = null;
+    if (studentId) {
+      const { data: assignment } = await supabase
+        .from('student_exam_assignments')
+        .select('variant_id, exam_variants(*)')
+        .eq('exam_id', examId)
+        .eq('student_id', studentId)
+        .maybeSingle();
+
+      if (assignment && assignment.exam_variants) {
+        assignedVariant = assignment.exam_variants;
+      }
+    }
+
+    const questionIdsToFetch = assignedVariant && assignedVariant.question_ids ? assignedVariant.question_ids : exam.question_ids;
+
+    // 3. Fetch all full question data
     const { data: questions, error: qError } = await supabase
       .from('questions')
       .select('id, content, options, correct_answer, explanation, question_type')
-      .in('id', exam.question_ids);
+      .in('id', questionIdsToFetch);
 
     if (qError) throw qError;
 
-    // 3. Fetch student details
+    // 4. Fetch student details
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('name, email')
@@ -38,22 +55,29 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
 
     if (studentError) throw studentError;
 
-    // 4. Grade the auto-gradable questions, identify if essay exists
+    // 5. Grade the auto-gradable questions against variant answer_key or original correct_answer
     let autoQuestionCredits = 0;
     let hasEssay = false;
 
-    const gradingDetails = questions.map((q: any) => {
+    // Maintain question sequence of assigned variant
+    const sortedQuestions = questionIdsToFetch.map((id: string) => questions.find((q: any) => q.id === id)).filter(Boolean);
+
+    const gradingDetails = sortedQuestions.map((q: any) => {
       const studentAnswer = answers[q.id] || '';
       let isCorrect = false;
       let credit = 0;
 
+      const targetCorrectAns = (assignedVariant && assignedVariant.answer_key && assignedVariant.answer_key[q.id])
+        ? assignedVariant.answer_key[q.id]
+        : q.correct_answer;
+
       if (q.question_type === 'MultipleChoice') {
-        isCorrect = studentAnswer.trim().toUpperCase() === q.correct_answer.trim().toUpperCase();
+        isCorrect = studentAnswer.trim().toUpperCase() === targetCorrectAns.trim().toUpperCase();
         credit = isCorrect ? 1 : 0;
         if (isCorrect) autoQuestionCredits++;
       } else if (q.question_type === 'TrueFalse') {
         try {
-          const correctObj = JSON.parse(q.correct_answer);
+          const correctObj = typeof targetCorrectAns === 'string' ? JSON.parse(targetCorrectAns) : targetCorrectAns;
           const studentObj = typeof studentAnswer === 'string' ? JSON.parse(studentAnswer) : studentAnswer;
           
           let tfCorrectCount = 0;
@@ -62,19 +86,18 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
           }
           
           isCorrect = tfCorrectCount === 4;
-          // Partial credit: ratio of correct sub-statements
           credit = tfCorrectCount / 4;
           autoQuestionCredits += credit;
         } catch (e) {
           console.error('Error grading True/False:', e);
         }
       } else if (q.question_type === 'FillIn') {
-        isCorrect = studentAnswer.trim().toLowerCase() === q.correct_answer.trim().toLowerCase();
+        isCorrect = studentAnswer.trim().toLowerCase() === targetCorrectAns.trim().toLowerCase();
         credit = isCorrect ? 1 : 0;
         if (isCorrect) autoQuestionCredits++;
       } else if (q.question_type === 'Essay') {
         hasEssay = true;
-        isCorrect = false; // Evaluated manually later
+        isCorrect = false;
         credit = 0;
       }
 
@@ -83,7 +106,7 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
         content: q.content,
         options: q.options,
         question_type: q.question_type,
-        correct_answer: q.correct_answer,
+        correct_answer: targetCorrectAns,
         student_answer: studentAnswer,
         explanation: q.explanation,
         is_correct: isCorrect,
@@ -91,56 +114,62 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
       };
     });
 
-    const totalQuestions = exam.question_ids.length;
+    const totalQuestions = questionIdsToFetch.length;
     const rawScore = (autoQuestionCredits / totalQuestions) * 10;
     const score = parseFloat(rawScore.toFixed(2));
     
     const status = hasEssay ? 'Pending' : 'Graded';
     const gradedScore = hasEssay ? null : score;
 
-    // 5. Insert submission record into database
+    // 6. Insert submission record into database
     const { data: submission, error: subError } = await supabase
       .from('submissions')
       .insert({
         exam_id: examId,
         student_id: studentId,
         answers,
-        score, // Stores raw auto-graded score
-        correct_count: Math.floor(autoQuestionCredits), // Integer representation of full correct
+        score,
+        correct_count: Math.floor(autoQuestionCredits),
         status,
-        graded_score: gradedScore
+        graded_score: gradedScore,
+        variant_code: assignedVariant ? assignedVariant.variant_code : null,
+        variant_id: assignedVariant ? assignedVariant.id : null
       })
       .select()
       .single();
 
     if (subError) throw subError;
 
-    // 6. Send preliminary or final email report
+    const showAnswers = exam.result_display_mode !== 'score_only';
+
+    // 7. Send preliminary or final email report
     let questionReportHtml = '';
-    gradingDetails.forEach((q: any, idx: number) => {
-      const statusColor = q.question_type === 'Essay' ? '#e2e8f0' : (q.credit >= 1 ? '#16a34a' : (q.credit > 0 ? '#d97706' : '#dc2626'));
-      const statusText = q.question_type === 'Essay' ? 'TỰ LUẬN (CHỜ CHẤM)' : (q.credit >= 1 ? 'ĐÚNG' : (q.credit > 0 ? `ĐÚNG PARTIAL (${q.credit*100}%)` : 'SAI'));
+    if (showAnswers) {
+      gradingDetails.forEach((q: any, idx: number) => {
+        const statusColor = q.question_type === 'Essay' ? '#e2e8f0' : (q.credit >= 1 ? '#16a34a' : (q.credit > 0 ? '#d97706' : '#dc2626'));
+        const statusText = q.question_type === 'Essay' ? 'TỰ LUẬN (CHỜ CHẤM)' : (q.credit >= 1 ? 'ĐÚNG' : (q.credit > 0 ? `ĐÚNG PARTIAL (${q.credit*100}%)` : 'SAI'));
 
-      let answerDisplay = q.student_answer;
-      if (q.question_type === 'TrueFalse') {
-        try {
-          const ansObj = typeof q.student_answer === 'string' ? JSON.parse(q.student_answer) : q.student_answer;
-          answerDisplay = `a: ${ansObj.a || '-'}, b: ${ansObj.b || '-'}, c: ${ansObj.c || '-'}, d: ${ansObj.d || '-'}`;
-        } catch (e) {
-          answerDisplay = 'Chưa làm';
+        let answerDisplay = q.student_answer;
+        if (q.question_type === 'TrueFalse') {
+          try {
+            const ansObj = typeof q.student_answer === 'string' ? JSON.parse(q.student_answer) : q.student_answer;
+            answerDisplay = `a: ${ansObj.a || '-'}, b: ${ansObj.b || '-'}, c: ${ansObj.c || '-'}, d: ${ansObj.d || '-'}`;
+          } catch (e) {
+            answerDisplay = 'Chưa làm';
+          }
         }
-      }
 
-      questionReportHtml += `
-        <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px; background-color: ${q.question_type === 'Essay' ? '#fafafa' : (q.credit >= 1 ? '#f0fdf4' : '#fef2f2')};">
-          <p style="margin: 0 0 10px 0;"><strong>Câu ${idx + 1} [${q.question_type}]:</strong> ${q.content}</p>
-          <p style="margin: 0 0 5px 0;">
-            Đáp án của bạn: <span style="font-weight: bold; color: #4f46e5;">${answerDisplay || 'Không chọn/Chưa viết'}</span> 
-            - Kết quả: <span style="font-weight: bold; color: ${statusColor};">${statusText}</span>
-          </p>
-        </div>
-      `;
-    });
+        questionReportHtml += `
+          <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px; background-color: ${q.question_type === 'Essay' ? '#fafafa' : (q.credit >= 1 ? '#f0fdf4' : '#fef2f2')};">
+            <p style="margin: 0 0 10px 0;"><strong>Câu ${idx + 1} [${q.question_type}]:</strong> ${q.content}</p>
+            <p style="margin: 0 0 5px 0;">
+              Đáp án của bạn: <span style="font-weight: bold; color: #4f46e5;">${answerDisplay || 'Không chọn/Chưa viết'}</span> 
+              - Kết quả: <span style="font-weight: bold; color: ${statusColor};">${statusText}</span>
+            </p>
+          </div>
+        `;
+      });
+    }
 
     const emailSubject = status === 'Pending' 
       ? `[KẾT QUẢ SƠ BỘ] Bài thi: ${exam.title} - ${score} Điểm trắc nghiệm`
@@ -153,7 +182,7 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
         
         <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; border: 1px solid #e2e8f0;">
           <p style="margin: 0 0 10px 0; font-size: 16px;">Học sinh: <strong>${student.name}</strong></p>
-          <p style="margin: 0 0 10px 0; font-size: 16px;">Đề thi: <strong>${exam.title}</strong></p>
+          <p style="margin: 0 0 10px 0; font-size: 16px;">Đề thi: <strong>${exam.title}</strong> ${assignedVariant ? `(Mã đề: ${assignedVariant.variant_code})` : ''}</p>
           <p style="margin: 0 0 10px 0; font-size: 16px;">Môn: <strong>${exam.subjects?.name}</strong></p>
           <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;"/>
           <h1 style="color: #4f46e5; font-size: 48px; margin: 10px 0;">${score} <span style="font-size: 20px; color: #64748b;">/ 10 điểm</span></h1>
@@ -162,8 +191,10 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
           </p>
         </div>
 
-        <h3 style="color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px;">Tóm Tắt Bài Làm</h3>
-        ${questionReportHtml}
+        ${showAnswers ? `
+          <h3 style="color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px;">Tóm Tắt Bài Làm</h3>
+          ${questionReportHtml}
+        ` : '<p style="text-align: center; color: #64748b; font-style: italic;">Giáo viên cài đặt chế độ chỉ hiển thị điểm số.</p>'}
         
         <p style="color: #64748b; font-size: 12px; margin-top: 30px; text-align: center;">Đây là email tự động từ Hệ thống Thi trực tuyến.</p>
       </div>
@@ -183,7 +214,10 @@ export async function submitExam({ examId, studentId, answers }: SubmitExamInput
       status,
       totalQuestions,
       correctCount: parseFloat(autoQuestionCredits.toFixed(2)),
-      submissionId: submission.id
+      submissionId: submission.id,
+      gradingDetails: showAnswers ? gradingDetails : null,
+      resultDisplayMode: exam.result_display_mode,
+      variantCode: assignedVariant ? assignedVariant.variant_code : null
     };
   } catch (error: any) {
     console.error('submitExam error:', error);
