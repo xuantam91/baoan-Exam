@@ -593,7 +593,7 @@ export default function PrintTemplatesManager() {
                         </div>
                         <div>
                           <p className="font-bold uppercase">{editingTemplate.exam_title || 'KỲ THI'}</p>
-                          <p className="font-semibold">Môn: Sinh Học 10</p>
+                          <p className="font-semibold">Môn Thi: Sinh Học 10</p>
                           <p className="italic text-[8px]">Thời gian làm bài: 45 phút</p>
                         </div>
                       </div>
@@ -608,7 +608,7 @@ export default function PrintTemplatesManager() {
                           </div>
                           <div>
                             <p className="font-bold uppercase">{editingTemplate.exam_title || 'KỲ THI'}</p>
-                            <p className="font-semibold">Môn thi: Sinh Học 10</p>
+                            <p className="font-semibold">Môn Thi: Sinh Học 10</p>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 p-1 text-left">

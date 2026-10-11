@@ -367,12 +367,11 @@ export default function ExamPrintPage() {
         
         const { data: examData, error: examError } = await supabase
           .from('exams')
-          .select('*, subjects(name), classes(name)')
+          .select('*, subjects(name), classes(name, grade)')
           .eq('id', examId)
           .single();
 
         if (examError) throw examError;
-        setExam(examData);
 
         const { data: qData, error: qError } = await supabase
           .from('questions')
@@ -380,6 +379,11 @@ export default function ExamPrintPage() {
           .in('id', examData.question_ids);
 
         if (qError) throw qError;
+
+        const rawGrade = examData.classes?.grade || examData.grade || (qData && qData[0]?.grade) || '';
+        const cleanGrade = rawGrade ? rawGrade.toString().replace(/^(khối|lớp)\s*/i, '').trim() : '';
+        const fullExamData = { ...examData, grade: cleanGrade };
+        setExam(fullExamData);
 
         const { data: vData } = await supabase
           .from('exam_variants')
@@ -487,10 +491,10 @@ export default function ExamPrintPage() {
     return (
       <div className="space-y-6 font-sans text-black">
         {/* Header Title */}
-        <div className="text-center space-y-2 uppercase">
-          <h2 className="text-xl font-bold">PHIẾU TRẢ LỜI TRẮC NGHIỆM</h2>
-          <h3 className="text-sm font-semibold">MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade}</h3>
-          <p className="text-xs italic lowercase">(Thí sinh dùng bút chì tô kín vào ô câu trả lời lựa chọn)</p>
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-bold uppercase">{exam?.title || 'PHIẾU TRẢ LỜI TRẮC NGHIỆM'}</h2>
+          <h3 className="text-sm font-semibold">Môn Thi: {[exam.subjects?.name, exam.grade].filter(Boolean).join(' ')}</h3>
+          <p className="text-xs italic text-slate-600">(Thí sinh dùng bút chì tô kín vào ô câu trả lời lựa chọn)</p>
         </div>
 
         {/* Student Info Box */}
@@ -650,10 +654,10 @@ export default function ExamPrintPage() {
         {/* PAGE 1: PRE-FILLED BUBBLE ANSWER SHEET FOR QUICK GRADING */}
         <div className="space-y-6 font-sans">
           {/* Header Title */}
-          <div className="text-center space-y-2 uppercase">
-            <h2 className="text-xl font-bold">PHIẾU ĐÁP ÁN ĐỤC LỖ / CHẤM NHANH</h2>
-            <h3 className="text-sm font-semibold">MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade}</h3>
-            <p className="text-xs italic lowercase">(Bản in dùng để đối chiếu hoặc đục lỗ đặt lên bài thi của học sinh)</p>
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-bold uppercase">{exam?.title || 'PHIẾU ĐÁP ÁN'} - ĐÁP ÁN ĐỤC LỖ</h2>
+            <h3 className="text-sm font-semibold">Môn Thi: {[exam.subjects?.name, exam.grade].filter(Boolean).join(' ')}</h3>
+            <p className="text-xs italic text-slate-600">(Bản in dùng để đối chiếu hoặc đục lỗ đặt lên bài thi của học sinh)</p>
           </div>
 
           {/* Student Info Box (Preserved for alignment) */}
@@ -803,9 +807,9 @@ export default function ExamPrintPage() {
         {/* PAGE 2+: SOLUTIONS AND DETAILED SOLUTION GUIDELINES */}
         <div className="space-y-6 font-serif pt-8">
           {/* Header */}
-          <div className="text-center space-y-1 uppercase border-b-2 border-black pb-4 mb-6">
-            <h2 className="text-xl font-bold">HƯỚNG DẪN GIẢI CHI TIẾT</h2>
-            <h3 className="text-sm font-semibold">MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade}</h3>
+          <div className="text-center space-y-1 border-b-2 border-black pb-4 mb-6">
+            <h2 className="text-xl font-bold uppercase">{exam?.title || 'HƯỚNG DẪN GIẢI CHI TIẾT'}</h2>
+            <h3 className="text-sm font-semibold">Môn Thi: {[exam.subjects?.name, exam.grade].filter(Boolean).join(' ')}</h3>
             <p className="text-xs font-mono lowercase">Mã đề: {exam.id.substring(0, 4).toUpperCase()}</p>
           </div>
 
@@ -898,32 +902,38 @@ export default function ExamPrintPage() {
       };
     }).filter(Boolean);
 
+    const examTitle = exam?.title || activeTemplate.exam_title || 'ĐỀ KIỂM TRA';
+    const rawGrade = exam?.grade || exam?.classes?.grade || (questions && questions[0]?.grade) || '';
+    const cleanGrade = rawGrade ? rawGrade.toString().replace(/^(khối|lớp)\s*/i, '').trim() : '';
+    const subjectName = exam?.subjects?.name || '';
+    const subjectGradeText = [subjectName, cleanGrade].filter(Boolean).join(' ');
+
     return (
       <div key={keyPrefix || currentVariantCode} className="space-y-6">
         {/* Exam Header */}
         {activeTemplate.header_style === 'tqt_exam_only' ? (
-          <div className="tqt-header-2col grid grid-cols-2 gap-4 border-b-2 border-black pb-3 mb-6 text-center text-sm uppercase">
+          <div className="tqt-header-2col grid grid-cols-2 gap-4 border-b-2 border-black pb-3 mb-6 text-center text-sm">
             <div className="space-y-0.5">
-              <h4 className="font-bold">{activeTemplate.school_name}</h4>
-              <h5 className="font-bold">ĐỀ SỐ {currentVariantCode}</h5>
-              <p className="italic text-xs text-slate-600 normal-case">(Đề thi có 03 trang)</p>
+              <h4 className="font-bold uppercase">{activeTemplate.school_name}</h4>
+              <h5 className="font-bold uppercase">ĐỀ SỐ {currentVariantCode}</h5>
+              <p className="italic text-xs text-slate-600">(Đề thi có 03 trang)</p>
             </div>
             <div className="space-y-0.5">
-              <h4 className="font-bold">{activeTemplate.exam_title}</h4>
-              <h5>MÔN: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade || ''}</h5>
-              <p className="italic text-xs normal-case">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
+              <h4 className="font-bold uppercase">{examTitle}</h4>
+              <h5 className="font-bold">Môn Thi: {subjectGradeText}</h5>
+              <p className="italic text-xs">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
             </div>
           </div>
         ) : activeTemplate.header_style === 'tqt_with_student_info' ? (
           <div className="tqt-header-box border border-black mb-6 text-sm">
-            <div className="grid grid-cols-2 border-b border-black text-center p-2 uppercase">
-              <div className="border-r border-black pr-2 space-y-0.5">
+            <div className="grid grid-cols-2 border-b border-black text-center p-2">
+              <div className="border-r border-black pr-2 space-y-0.5 uppercase">
                 <h4 className="font-bold">{activeTemplate.school_name}</h4>
                 <h5 className="font-bold">MÃ ĐỀ THI: {currentVariantCode}</h5>
               </div>
               <div className="pl-2 space-y-0.5">
-                <h4 className="font-bold">{activeTemplate.exam_title}</h4>
-                <h5>MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade || ''}</h5>
+                <h4 className="font-bold uppercase">{examTitle}</h4>
+                <h5 className="font-bold">Môn Thi: {subjectGradeText}</h5>
               </div>
             </div>
             <div className="grid grid-cols-2 p-2.5 text-xs">
@@ -938,28 +948,30 @@ export default function ExamPrintPage() {
             </div>
           </div>
         ) : activeTemplate.header_style === 'simple' ? (
-          <div className="border-b-2 border-black pb-3 mb-6 text-center uppercase text-sm">
-            <h4 className="font-bold">{activeTemplate.school_name}</h4>
-            <h5 className="font-extrabold text-base">{activeTemplate.exam_title}</h5>
-            <p className="text-xs font-semibold normal-case mt-1">
-              MÔN: {exam.subjects?.name} | MÃ ĐỀ: <strong>{currentVariantCode}</strong> | THỜI GIAN: <strong>{exam.duration_minutes} PHÚT</strong>
+          <div className="border-b-2 border-black pb-3 mb-6 text-center text-sm">
+            <h4 className="font-bold uppercase">{activeTemplate.school_name}</h4>
+            <h5 className="font-extrabold text-base uppercase">{examTitle}</h5>
+            <p className="text-xs font-semibold mt-1">
+              Môn Thi: {subjectGradeText} | MÃ ĐỀ: <strong>{currentVariantCode}</strong> | THỜI GIAN: <strong>{exam.duration_minutes} PHÚT</strong>
             </p>
           </div>
         ) : (
           /* boxed_student_info (Chuẩn Bộ GD&ĐT) */
           <>
-            <div className="grid grid-cols-2 gap-4 border-b-2 border-black pb-4 mb-6 text-center text-sm font-sans uppercase">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-4 border-b-2 border-black pb-4 mb-6 text-center text-sm font-sans">
+              <div className="space-y-1 uppercase">
                 <h4 className="font-bold">{activeTemplate.school_name || 'TRƯỜNG THPT CHUYÊN THI CỬ'}</h4>
-                <h5>{activeTemplate.exam_title || 'ĐỀ THI KHẢO SÁT CHẤT LƯỢNG'}</h5>
+                <h5>{examTitle}</h5>
                 <p className="font-bold text-xs bg-slate-100 py-0.5 border border-black inline-block px-3">
                   MÃ ĐỀ THI: {currentVariantCode}
                 </p>
               </div>
               <div className="space-y-1">
-                <h4 className="font-bold">KỲ THI TRẮC NGHIỆM TRỰC TUYẾN</h4>
-                <h5>MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade}</h5>
-                <p className="text-xs">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
+                <h4 className="font-bold uppercase">KỲ THI TRẮC NGHIỆM TRỰC TUYẾN</h4>
+                <h5 className="font-bold">Môn Thi: {subjectGradeText}</h5>
+                <p className="italic text-xs">
+                  (Thời gian làm bài: {exam.duration_minutes} phút, không kể thời gian phát đề)
+                </p>
               </div>
             </div>
 
