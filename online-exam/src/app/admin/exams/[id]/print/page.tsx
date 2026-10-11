@@ -5,11 +5,8 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { getSubmissionDetails } from '@/app/actions/submissions'; // retrieves exam + questions sorted
 import { regenerateExamVariants } from '@/app/actions/exams';
 import { reorderQuestionOptions } from '@/lib/variant-utils';
-import { 
-  PrintTemplate, 
-  getPrintTemplates, 
-  BUILTIN_PRINT_TEMPLATES 
-} from '@/app/actions/print-templates';
+import { PrintTemplate, BUILTIN_PRINT_TEMPLATES } from '@/types/print-templates';
+import { getPrintTemplates } from '@/app/actions/print-templates';
 import { LatexRenderer } from '@/components/LatexRenderer';
 import { Loader2, Printer, ArrowLeft, Download, FileText } from 'lucide-react';
 

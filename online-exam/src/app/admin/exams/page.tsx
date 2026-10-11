@@ -6,6 +6,7 @@ import { getSubjects, getClasses, getChapters, getLessons } from '@/app/actions/
 import { getExams, createRandomExam, deleteExam, sendExamLinksToClass, getExamTemplates, createExamTemplate, deleteExamTemplate } from '@/app/actions/exams';
 import { getQuestionCountStats, getCurriculumQuestionCounts } from '@/app/actions/questions';
 import { getPrintTemplates } from '@/app/actions/print-templates';
+import { BUILTIN_PRINT_TEMPLATES } from '@/types/print-templates';
 import { 
   FileSpreadsheet, 
   Plus, 
@@ -67,25 +68,33 @@ export default function ExamsPage() {
   const [savingTemplate, setSavingTemplate] = useState<boolean>(false);
 
   // Print templates states
-  const [printTemplates, setPrintTemplates] = useState<any[]>([]);
-  const [selectedPrintTemplateId, setSelectedPrintTemplateId] = useState<string>('');
+  const [printTemplates, setPrintTemplates] = useState<any[]>(BUILTIN_PRINT_TEMPLATES);
+  const [selectedPrintTemplateId, setSelectedPrintTemplateId] = useState<string>(BUILTIN_PRINT_TEMPLATES[0].id);
 
   useEffect(() => {
     const loadPT = async () => {
-      const res = await getPrintTemplates();
-      if (res.success && res.data) {
-        setPrintTemplates(res.data);
-        const def = res.data.find((t: any) => t.is_default) || res.data[0];
-        if (def) setSelectedPrintTemplateId(def.id);
+      try {
+        const res = await getPrintTemplates();
+        if (res && res.success && res.data) {
+          setPrintTemplates(res.data);
+          const def = res.data.find((t: any) => t.is_default) || res.data[0];
+          if (def) setSelectedPrintTemplateId(def.id);
+        }
+      } catch (err) {
+        console.warn('loadPT error:', err);
       }
     };
     loadPT();
   }, []);
 
   const loadTemplates = async () => {
-    const res = await getExamTemplates();
-    if (res.success) {
-      setTemplates(res.data || []);
+    try {
+      const res = await getExamTemplates();
+      if (res && res.success) {
+        setTemplates(res.data || []);
+      }
+    } catch (err) {
+      console.warn('loadTemplates error:', err);
     }
   };
 
@@ -333,26 +342,38 @@ export default function ExamsPage() {
 
   const loadExams = async () => {
     setLoading(true);
-    const res = await getExams();
-    if (res.success) {
-      setExams(res.data || []);
+    try {
+      const res = await getExams();
+      if (res && res.success) {
+        setExams(res.data || []);
+      } else {
+        console.warn('loadExams warning:', res?.error);
+      }
+    } catch (err) {
+      console.error('loadExams error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadMetadata = async () => {
     setMetadataLoading(true);
-    const [subRes, classRes] = await Promise.all([getSubjects(), getClasses()]);
-    if (subRes.success) setSubjects(subRes.data || []);
-    if (classRes.success) {
-      setClasses(classRes.data || []);
+    try {
+      const [subRes, classRes] = await Promise.all([getSubjects(), getClasses()]);
+      if (subRes && subRes.success) setSubjects(subRes.data || []);
+      if (classRes && classRes.success) {
+        setClasses(classRes.data || []);
+      }
+      
+      // Set default select values
+      if (subRes && subRes.success && subRes.data && subRes.data.length > 0) {
+        setSubjectId(subRes.data[0].id);
+      }
+    } catch (err) {
+      console.error('loadMetadata error:', err);
+    } finally {
+      setMetadataLoading(false);
     }
-    
-    // Set default select values
-    if (subRes.success && subRes.data && subRes.data.length > 0) {
-      setSubjectId(subRes.data[0].id);
-    }
-    setMetadataLoading(false);
   };
 
   const handleCreateExam = async (e: React.FormEvent) => {

@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PrintTemplate, BUILTIN_PRINT_TEMPLATES } from '@/types/print-templates';
 import { 
-  PrintTemplate, 
   getPrintTemplates, 
   createPrintTemplate, 
   updatePrintTemplate, 
   deletePrintTemplate, 
-  setDefaultPrintTemplate,
-  BUILTIN_PRINT_TEMPLATES 
+  setDefaultPrintTemplate 
 } from '@/app/actions/print-templates';
 import { 
   FileText, 
