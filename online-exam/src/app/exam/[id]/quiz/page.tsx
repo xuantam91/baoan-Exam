@@ -464,7 +464,7 @@ export default function StudentQuizPage() {
                             )}
                             <span className="flex-1">
                               {q.is_multiselect && <strong className="mr-1.5 text-slate-400">{key}.</strong>}
-                              {q.options[key]}
+                              <LatexRenderer text={q.options[key]} />
                             </span>
                           </button>
                         );
@@ -486,7 +486,9 @@ export default function StudentQuizPage() {
                           <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-slate-150 dark:border-slate-800 rounded-xl text-sm gap-2">
                             <div className="flex items-start gap-2">
                               <span className="font-bold text-xs uppercase text-indigo-500 mt-0.5">{key}.</span>
-                              <span className="text-slate-700 dark:text-slate-300">{q.options[key]}</span>
+                              <span className="text-slate-700 dark:text-slate-300">
+                                <LatexRenderer text={q.options[key]} />
+                              </span>
                             </div>
                             <div className="flex gap-2 shrink-0">
                               <button

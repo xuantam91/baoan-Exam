@@ -742,7 +742,7 @@ export default function ScoresPage() {
                                 return (
                                   <div key={key} className={`px-4 py-2.5 rounded-lg text-xs font-medium flex items-start gap-2 ${optionClass}`}>
                                     <span className="font-bold shrink-0">{key}.</span>
-                                    <span>{q.options[key]}</span>
+                                    <span><LatexRenderer text={q.options[key]} /></span>
                                   </div>
                                 );
                               })}
@@ -762,7 +762,7 @@ export default function ScoresPage() {
                                   <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 border border-slate-150 dark:border-slate-800 rounded-lg text-xs gap-2">
                                     <div className="flex items-start gap-2">
                                       <span className="font-bold uppercase text-indigo-500">{key}.</span>
-                                      <span>{q.options[key]}</span>
+                                      <span><LatexRenderer text={q.options[key]} /></span>
                                     </div>
                                     <div className="flex gap-4 font-semibold">
                                       <span>Đáp án: <strong className="text-emerald-600">{corrVal}</strong></span>

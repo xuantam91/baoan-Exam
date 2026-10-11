@@ -1061,7 +1061,7 @@ export default function ExamPrintPage() {
                     {Object.keys(q.options).sort().map(key => (
                       <div key={key} className="flex items-start gap-1">
                         <span className="font-bold">{key}.</span>
-                        <div>{q.options[key]}</div>
+                        <div><LatexRenderer text={q.options[key]} /></div>
                       </div>
                     ))}
                   </div>
@@ -1074,7 +1074,7 @@ export default function ExamPrintPage() {
                       <div key={key} className="flex justify-between items-start border border-dashed border-slate-200 p-2 rounded max-w-2xl">
                         <div className="flex gap-2">
                           <span className="font-bold uppercase text-indigo-600">{key}.</span>
-                          <span>{q.options[key]}</span>
+                          <span><LatexRenderer text={q.options[key]} /></span>
                         </div>
                         <div className="flex gap-4 shrink-0 font-bold ml-4">
                           <span>[ ] Đúng</span>
