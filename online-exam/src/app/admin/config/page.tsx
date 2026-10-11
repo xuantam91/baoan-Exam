@@ -20,6 +20,7 @@ import {
   createGrade,
   deleteGrade
 } from '@/app/actions/metadata';
+import PrintTemplatesManager from '@/components/PrintTemplatesManager';
 import { 
   BookOpen, 
   School, 
@@ -722,6 +723,9 @@ export default function ConfigPage() {
           </div>
         )}
       </div>
+
+      {/* ── SECTION: PRINT TEMPLATES MANAGEMENT ── */}
+      <PrintTemplatesManager />
 
       {/* ── SECTION: SYSTEM CONTACTS CONFIGURATION ── */}
       <div 

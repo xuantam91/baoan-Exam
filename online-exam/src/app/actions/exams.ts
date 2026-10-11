@@ -36,7 +36,8 @@ export async function createRandomExam({
   chapterIds = [],
   lessonIds = [],
   isShuffled = false,
-  numVariants = 1
+  numVariants = 1,
+  printTemplateId
 }: {
   title: string;
   subjectId: string;
@@ -54,6 +55,7 @@ export async function createRandomExam({
   lessonIds?: string[];
   isShuffled?: boolean;
   numVariants?: number;
+  printTemplateId?: string;
 }) {
   try {
     // 1. Get class grade if classId is provided
@@ -203,7 +205,8 @@ export async function createRandomExam({
         duration_minutes: durationMinutes,
         question_ids: selectedIds,
         is_shuffled: isShuffled,
-        num_variants: actualNumVariants
+        num_variants: actualNumVariants,
+        print_template_id: printTemplateId || null
       })
       .select()
       .single();

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { getSubjects, getClasses, getChapters, getLessons } from '@/app/actions/metadata';
 import { getExams, createRandomExam, deleteExam, sendExamLinksToClass, getExamTemplates, createExamTemplate, deleteExamTemplate } from '@/app/actions/exams';
 import { getQuestionCountStats, getCurriculumQuestionCounts } from '@/app/actions/questions';
+import { getPrintTemplates } from '@/app/actions/print-templates';
 import { 
   FileSpreadsheet, 
   Plus, 
@@ -64,6 +65,22 @@ export default function ExamsPage() {
   const [newTemplateName, setNewTemplateName] = useState<string>('');
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState<boolean>(false);
   const [savingTemplate, setSavingTemplate] = useState<boolean>(false);
+
+  // Print templates states
+  const [printTemplates, setPrintTemplates] = useState<any[]>([]);
+  const [selectedPrintTemplateId, setSelectedPrintTemplateId] = useState<string>('');
+
+  useEffect(() => {
+    const loadPT = async () => {
+      const res = await getPrintTemplates();
+      if (res.success && res.data) {
+        setPrintTemplates(res.data);
+        const def = res.data.find((t: any) => t.is_default) || res.data[0];
+        if (def) setSelectedPrintTemplateId(def.id);
+      }
+    };
+    loadPT();
+  }, []);
 
   const loadTemplates = async () => {
     const res = await getExamTemplates();
@@ -424,7 +441,8 @@ export default function ExamsPage() {
       chapterIds: selectedChapters,
       lessonIds: selectedLessons,
       isShuffled,
-      numVariants: isShuffled ? Math.max(1, numVariants) : 1
+      numVariants: isShuffled ? Math.max(1, numVariants) : 1,
+      printTemplateId: selectedPrintTemplateId || undefined
     });
 
     if (res.success) {
@@ -557,6 +575,23 @@ export default function ExamsPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                  Mẫu in & Trình bày đề thi *
+                </label>
+                <select
+                  value={selectedPrintTemplateId}
+                  onChange={(e) => setSelectedPrintTemplateId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium"
+                >
+                  {printTemplates.map((pt) => (
+                    <option key={pt.id} value={pt.id}>
+                      {pt.name} {pt.is_default ? '(Mặc định)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

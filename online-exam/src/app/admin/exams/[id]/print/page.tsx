@@ -5,6 +5,11 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { getSubmissionDetails } from '@/app/actions/submissions'; // retrieves exam + questions sorted
 import { regenerateExamVariants } from '@/app/actions/exams';
 import { reorderQuestionOptions } from '@/lib/variant-utils';
+import { 
+  PrintTemplate, 
+  getPrintTemplates, 
+  BUILTIN_PRINT_TEMPLATES 
+} from '@/app/actions/print-templates';
 import { LatexRenderer } from '@/components/LatexRenderer';
 import { Loader2, Printer, ArrowLeft, Download, FileText } from 'lucide-react';
 
@@ -18,15 +23,19 @@ export default function ExamPrintPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
   const [selectedVariantCode, setSelectedVariantCode] = useState<string>('all');
+  const [templates, setTemplates] = useState<PrintTemplate[]>(BUILTIN_PRINT_TEMPLATES);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(BUILTIN_PRINT_TEMPLATES[0].id);
   const [loading, setLoading] = useState(true);
+
+  const activeTemplate = templates.find(t => t.id === selectedTemplateId) || templates[0] || BUILTIN_PRINT_TEMPLATES[0];
 
   const handleExportWord = () => {
     // 1. Prepare HTML Content with DOM manipulation to convert CSS grids to HTML Tables for MS Word
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = document.getElementById('printable-content')?.innerHTML || '';
 
-    // Transform Header: grid grid-cols-2 -> Table
-    const headers = tempDiv.querySelectorAll('.grid-cols-2.border-b-2');
+    // Transform Header 2 columns: .tqt-header-2col, .grid-cols-2.border-b-2 -> Table
+    const headers = tempDiv.querySelectorAll('.tqt-header-2col, .grid-cols-2.border-b-2');
     headers.forEach(header => {
       const children = Array.from(header.children);
       if (children.length === 2) {
@@ -36,13 +45,53 @@ export default function ExamPrintPage() {
         
         children.forEach(child => {
           const td = document.createElement('td');
-          td.setAttribute('style', 'width: 50%; border: none; text-align: center; vertical-align: top; font-family: Arial, sans-serif; font-size: 10pt;');
+          td.setAttribute('style', 'width: 50%; border: none; text-align: center; vertical-align: top; font-family: "Times New Roman", serif; font-size: 11pt;');
           td.innerHTML = child.innerHTML;
           tr.appendChild(td);
         });
         
         table.appendChild(tr);
         header.replaceWith(table);
+      }
+    });
+
+    // Transform TQT Header Box 2x2: .tqt-header-box -> Table
+    const tqtBoxes = tempDiv.querySelectorAll('.tqt-header-box');
+    tqtBoxes.forEach(box => {
+      const rows = Array.from(box.children);
+      if (rows.length >= 2) {
+        const table = document.createElement('table');
+        table.setAttribute('style', 'width: 100%; border-collapse: collapse; border: 1px solid black; margin-bottom: 20px; font-family: "Times New Roman", serif; font-size: 10pt;');
+        
+        const row1Cells = Array.from(rows[0].children);
+        if (row1Cells.length === 2) {
+          const tr1 = document.createElement('tr');
+          const td1_1 = document.createElement('td');
+          td1_1.setAttribute('style', 'width: 50%; border: 1px solid black; text-align: center; vertical-align: top; padding: 6px;');
+          td1_1.innerHTML = row1Cells[0].innerHTML;
+          const td1_2 = document.createElement('td');
+          td1_2.setAttribute('style', 'width: 50%; border: 1px solid black; text-align: center; vertical-align: top; padding: 6px;');
+          td1_2.innerHTML = row1Cells[1].innerHTML;
+          tr1.appendChild(td1_1);
+          tr1.appendChild(td1_2);
+          table.appendChild(tr1);
+        }
+
+        const row2Cells = Array.from(rows[1].children);
+        if (row2Cells.length === 2) {
+          const tr2 = document.createElement('tr');
+          const td2_1 = document.createElement('td');
+          td2_1.setAttribute('style', 'width: 50%; border: 1px solid black; text-align: left; vertical-align: top; padding: 6px;');
+          td2_1.innerHTML = row2Cells[0].innerHTML;
+          const td2_2 = document.createElement('td');
+          td2_2.setAttribute('style', 'width: 50%; border: 1px solid black; text-align: center; vertical-align: middle; padding: 6px;');
+          td2_2.innerHTML = row2Cells[1].innerHTML;
+          tr2.appendChild(td2_1);
+          tr2.appendChild(td2_2);
+          table.appendChild(tr2);
+        }
+
+        box.replaceWith(table);
       }
     });
 
@@ -224,19 +273,21 @@ export default function ExamPrintPage() {
     const style = `
       <style>
         @page Section1 {
-          size: 8.27in 11.69in; /* A4 size */
-          margin: 0.79in 0.79in 0.79in 0.79in; /* A4 2cm margins */
-          mso-header-margin: .5in;
-          mso-footer-margin: .5in;
+          size: ${activeTemplate.paper_size === 'A5' ? '148.0mm 210.0mm' : '210.0mm 297.0mm'};
+          margin: ${activeTemplate.margin_top}mm ${activeTemplate.margin_right}mm ${activeTemplate.margin_bottom}mm ${activeTemplate.margin_left}mm;
+          mso-header-margin: 10mm;
+          mso-footer-margin: 10mm;
           mso-paper-source: 0;
         }
         div.Section1 {
           page: Section1;
+          font-family: '${activeTemplate.font_family}', 'Times New Roman', serif;
+          font-size: ${activeTemplate.font_size};
         }
         body { 
-          font-family: 'Times New Roman', serif; 
-          font-size: 12pt; 
-          line-height: 1.5; 
+          font-family: '${activeTemplate.font_family}', 'Times New Roman', serif; 
+          font-size: ${activeTemplate.font_size}; 
+          line-height: 1.4; 
           color: black; 
         }
         h2, h3, h4, h5 { 
@@ -369,6 +420,23 @@ export default function ExamPrintPage() {
         ).filter(Boolean);
 
         setQuestions(sorted);
+
+        // Load print templates
+        try {
+          const tRes = await getPrintTemplates();
+          const tmpls = (tRes.success && tRes.data && tRes.data.length > 0) ? tRes.data : BUILTIN_PRINT_TEMPLATES;
+          setTemplates(tmpls);
+          const matchedTmpl = examData.print_template_id 
+            ? tmpls.find((t: any) => t.id === examData.print_template_id)
+            : tmpls.find((t: any) => t.is_default);
+          if (matchedTmpl) {
+            setSelectedTemplateId(matchedTmpl.id);
+          } else {
+            setSelectedTemplateId(tmpls[0].id);
+          }
+        } catch (tErr) {
+          console.warn('Error loading templates in print page:', tErr);
+        }
       } catch (e) {
         console.error('Error loading print exam details:', e);
       }
@@ -836,40 +904,89 @@ export default function ExamPrintPage() {
     return (
       <div key={keyPrefix || currentVariantCode} className="space-y-6">
         {/* Exam Header */}
-        <div className="grid grid-cols-2 gap-4 border-b-2 border-black pb-4 mb-6 text-center text-sm font-sans uppercase">
-          <div className="space-y-1">
-            <h4 className="font-bold">TRƯỜNG THPT CHUYÊN THI CỬ</h4>
-            <h5>ĐỀ THI KHẢO SÁT CHẤT LƯỢNG</h5>
-            <p className="font-bold text-xs bg-slate-100 py-0.5 border border-black inline-block px-3">
-              MÃ ĐỀ THI: {currentVariantCode}
+        {activeTemplate.header_style === 'tqt_exam_only' ? (
+          <div className="tqt-header-2col grid grid-cols-2 gap-4 border-b-2 border-black pb-3 mb-6 text-center text-sm uppercase">
+            <div className="space-y-0.5">
+              <h4 className="font-bold">{activeTemplate.school_name}</h4>
+              <h5 className="font-bold">ĐỀ SỐ {currentVariantCode}</h5>
+              <p className="italic text-xs text-slate-600 normal-case">(Đề thi có 03 trang)</p>
+            </div>
+            <div className="space-y-0.5">
+              <h4 className="font-bold">{activeTemplate.exam_title}</h4>
+              <h5>MÔN: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade || ''}</h5>
+              <p className="italic text-xs normal-case">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
+            </div>
+          </div>
+        ) : activeTemplate.header_style === 'tqt_with_student_info' ? (
+          <div className="tqt-header-box border border-black mb-6 text-sm">
+            <div className="grid grid-cols-2 border-b border-black text-center p-2 uppercase">
+              <div className="border-r border-black pr-2 space-y-0.5">
+                <h4 className="font-bold">{activeTemplate.school_name}</h4>
+                <h5 className="font-bold">MÃ ĐỀ THI: {currentVariantCode}</h5>
+              </div>
+              <div className="pl-2 space-y-0.5">
+                <h4 className="font-bold">{activeTemplate.exam_title}</h4>
+                <h5>MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade || ''}</h5>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 p-2.5 text-xs">
+              <div className="border-r border-black pr-3 space-y-1.5 text-left font-sans">
+                <p>Họ và tên thí sinh: ............................................................................</p>
+                <p>Số báo danh: .....................................................................................</p>
+              </div>
+              <div className="pl-3 text-center space-y-0.5 flex flex-col justify-center">
+                <p className="font-bold">Thời gian làm bài: {exam.duration_minutes} phút</p>
+                <p className="italic text-slate-600">(Không kể thời gian phát đề)</p>
+              </div>
+            </div>
+          </div>
+        ) : activeTemplate.header_style === 'simple' ? (
+          <div className="border-b-2 border-black pb-3 mb-6 text-center uppercase text-sm">
+            <h4 className="font-bold">{activeTemplate.school_name}</h4>
+            <h5 className="font-extrabold text-base">{activeTemplate.exam_title}</h5>
+            <p className="text-xs font-semibold normal-case mt-1">
+              MÔN: {exam.subjects?.name} | MÃ ĐỀ: <strong>{currentVariantCode}</strong> | THỜI GIAN: <strong>{exam.duration_minutes} PHÚT</strong>
             </p>
           </div>
-          <div className="space-y-1">
-            <h4 className="font-bold">KỲ THI TRẮC NGHIỆM TRỰC TUYẾN</h4>
-            <h5>MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade}</h5>
-            <p className="text-xs">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
-          </div>
-        </div>
+        ) : (
+          /* boxed_student_info (Chuẩn Bộ GD&ĐT) */
+          <>
+            <div className="grid grid-cols-2 gap-4 border-b-2 border-black pb-4 mb-6 text-center text-sm font-sans uppercase">
+              <div className="space-y-1">
+                <h4 className="font-bold">{activeTemplate.school_name || 'TRƯỜNG THPT CHUYÊN THI CỬ'}</h4>
+                <h5>{activeTemplate.exam_title || 'ĐỀ THI KHẢO SÁT CHẤT LƯỢNG'}</h5>
+                <p className="font-bold text-xs bg-slate-100 py-0.5 border border-black inline-block px-3">
+                  MÃ ĐỀ THI: {currentVariantCode}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-bold">KỲ THI TRẮC NGHIỆM TRỰC TUYẾN</h4>
+                <h5>MÔN THI: {exam.subjects?.name} - KHỐI {exam.grade || exam.classes?.grade}</h5>
+                <p className="text-xs">Thời gian làm bài: <strong>{exam.duration_minutes} phút</strong></p>
+              </div>
+            </div>
 
-        {/* Student Identity Boxes */}
-        <div className="border border-black p-4 rounded mb-8 grid grid-cols-3 gap-4 text-sm font-sans">
-          <div className="col-span-2">
-            Họ và tên thí sinh: ............................................................................
-          </div>
-          <div>
-            Lớp: .............................
-          </div>
-          <div className="col-span-2">
-            Số báo danh / Email: ......................................................................
-          </div>
-          <div>
-            Phòng thi: .....................
-          </div>
-        </div>
+            {/* Student Identity Boxes */}
+            <div className="border border-black p-4 rounded mb-8 grid grid-cols-3 gap-4 text-sm font-sans">
+              <div className="col-span-2">
+                Họ và tên thí sinh: ............................................................................
+              </div>
+              <div>
+                Lớp: .............................
+              </div>
+              <div className="col-span-2">
+                Số báo danh / Email: ......................................................................
+              </div>
+              <div>
+                Phòng thi: .....................
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Exam Instruction */}
         <div className="text-xs italic mb-6 text-center font-sans border-b border-dashed border-slate-300 pb-4">
-          (Đề thi gồm {variantQuestions.length} câu hỏi. Thí sinh trả lời trực tiếp vào tờ phiếu hoặc làm bài tự luận theo yêu cầu)
+          {(activeTemplate.instruction_note || '(Đề thi gồm {total_questions} câu hỏi. Thí sinh trả lời trực tiếp vào tờ phiếu hoặc làm bài tự luận theo yêu cầu)').replace('{total_questions}', String(variantQuestions.length))}
         </div>
 
         {/* Questions Listing */}
@@ -979,28 +1096,36 @@ export default function ExamPrintPage() {
         </div>
 
         {/* Exam Footer */}
-        <div className="mt-16 pt-6 border-t border-black text-center text-xs font-sans text-slate-500">
-          <p className="text-center" style={{ textAlign: 'center' }}>------ HẾT ------</p>
-          <p className="mt-1 font-semibold text-center" style={{ textAlign: 'center' }}>Cán bộ coi thi không giải thích gì thêm.</p>
+        <div className="mt-16 pt-6 border-t border-black text-center text-xs font-serif text-slate-600 whitespace-pre-line">
+          {activeTemplate.footer_text || '------ HẾT ------\nCán bộ coi thi không giải thích gì thêm.'}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-white text-black p-8 max-w-4xl mx-auto font-serif selection:bg-slate-100">
+    <div 
+      id="printable-content"
+      style={{
+        fontFamily: activeTemplate.font_family,
+        fontSize: activeTemplate.font_size,
+        maxWidth: activeTemplate.paper_size === 'A5' ? '680px' : '900px'
+      }}
+      className="min-h-screen bg-white text-black p-8 mx-auto font-serif selection:bg-slate-100"
+    >
       
       {/* Printable CSS Settings */}
       <style jsx global>{`
         @page {
-          size: auto;
-          margin: 15mm;
+          size: ${activeTemplate.paper_size} ${activeTemplate.orientation};
+          margin: ${activeTemplate.margin_top}mm ${activeTemplate.margin_right}mm ${activeTemplate.margin_bottom}mm ${activeTemplate.margin_left}mm;
         }
         @media print {
           html, body {
             background-color: white !important;
             color: black !important;
-            font-size: 12pt !important;
+            font-family: '${activeTemplate.font_family}', 'Times New Roman', serif !important;
+            font-size: ${activeTemplate.font_size} !important;
             margin: 0 !important;
             padding: 0 !important;
           }
@@ -1026,19 +1151,35 @@ export default function ExamPrintPage() {
 
       {/* Floating Action Bar (Hidden during print) */}
       <div className="no-print mb-8 p-4 rounded-xl bg-slate-100 border border-slate-200 flex flex-wrap items-center justify-between gap-4 font-sans">
-        <div className="flex items-center gap-3 text-sm text-slate-600">
+        <div className="flex items-center gap-3 text-sm text-slate-600 flex-wrap">
           <ArrowLeft className="w-4 h-4 cursor-pointer" onClick={() => window.close()} />
           <span>Quay lại trang quản trị</span>
 
+          {/* Template Selector Dropdown */}
+          <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-300">
+            <span className="text-xs font-bold text-slate-700">Mẫu in:</span>
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => setSelectedTemplateId(e.target.value)}
+              className="px-2.5 py-1 text-xs rounded border border-slate-300 bg-white font-bold text-indigo-600 max-w-[280px] truncate"
+            >
+              {templates.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.is_default ? '★' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {variants.length > 0 && (
-            <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-300">
-              <span className="text-xs font-bold text-slate-700">Chọn Mã đề:</span>
+            <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-300">
+              <span className="text-xs font-bold text-slate-700">Mã đề:</span>
               <select
                 value={selectedVariantCode}
                 onChange={(e) => setSelectedVariantCode(e.target.value)}
                 className="px-2.5 py-1 text-xs rounded border border-slate-300 bg-white font-bold text-indigo-600"
               >
-                <option value="all">🖨️ In tất cả mã đề ({variants.length} mã)</option>
+                <option value="all">🖨️ In tất cả ({variants.length} mã đề)</option>
                 {variants.map(v => (
                   <option key={v.id} value={v.variant_code}>Mã đề {v.variant_code}</option>
                 ))}
