@@ -102,14 +102,16 @@ export async function deleteClass(id: string) {
 
 // --- CHAPTERS AND LESSONS ACTIONS ---
 
-export async function getChapters(subjectId: string, grade: string) {
+export async function getChapters(subjectId?: string, grade?: string) {
   try {
-    const { data, error } = await supabase
-      .from('chapters')
-      .select('*')
-      .eq('subject_id', subjectId)
-      .eq('grade', grade)
-      .order('created_at', { ascending: true });
+    let query = supabase.from('chapters').select('*');
+    if (subjectId && subjectId !== 'all') {
+      query = query.eq('subject_id', subjectId);
+    }
+    if (grade && grade !== 'all') {
+      query = query.eq('grade', grade);
+    }
+    const { data, error } = await query.order('created_at', { ascending: true });
     
     if (error) throw error;
     return { success: true, data };
@@ -152,13 +154,13 @@ export async function deleteChapter(id: string) {
   }
 }
 
-export async function getLessons(chapterId: string) {
+export async function getLessons(chapterId?: string) {
   try {
-    const { data, error } = await supabase
-      .from('lessons')
-      .select('*')
-      .eq('chapter_id', chapterId)
-      .order('created_at', { ascending: true });
+    let query = supabase.from('lessons').select('*');
+    if (chapterId && chapterId !== 'all') {
+      query = query.eq('chapter_id', chapterId);
+    }
+    const { data, error } = await query.order('created_at', { ascending: true });
 
     if (error) throw error;
     return { success: true, data };

@@ -19,7 +19,8 @@ import {
   HelpCircle,
   AlertCircle,
   ImageIcon,
-  Sparkles
+  Sparkles,
+  RotateCcw
 } from 'lucide-react';
 
 export default function QuestionsPage() {
@@ -34,8 +35,17 @@ export default function QuestionsPage() {
   // Filter states
   const [subjectFilter, setSubjectFilter] = useState('all');
   const [gradeFilter, setGradeFilter] = useState('all');
+  const [chapterFilter, setChapterFilter] = useState('all');
+  const [lessonFilter, setLessonFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Available chapters & lessons for filtering
+  const [filterChapters, setFilterChapters] = useState<any[]>([]);
+  const [filterLessons, setFilterLessons] = useState<any[]>([]);
+  const [loadingFilterChapters, setLoadingFilterChapters] = useState(false);
+  const [loadingFilterLessons, setLoadingFilterLessons] = useState(false);
 
   // Form Modal States
   const [modalOpen, setModalOpen] = useState(false);
@@ -191,6 +201,56 @@ export default function QuestionsPage() {
     }
     setLoading(false);
   };
+
+  // Load chapters for filter when subjectFilter or gradeFilter changes
+  useEffect(() => {
+    let isCurrent = true;
+    async function loadFilterChapters() {
+      setLoadingFilterChapters(true);
+      const res = await getChapters(subjectFilter, gradeFilter);
+      if (isCurrent) {
+        if (res.success && res.data) {
+          setFilterChapters(res.data);
+        } else {
+          setFilterChapters([]);
+        }
+        setChapterFilter('all');
+        setLessonFilter('all');
+        setFilterLessons([]);
+        setLoadingFilterChapters(false);
+      }
+    }
+    loadFilterChapters();
+    return () => {
+      isCurrent = false;
+    };
+  }, [subjectFilter, gradeFilter]);
+
+  // Load lessons for filter when chapterFilter changes
+  useEffect(() => {
+    let isCurrent = true;
+    async function loadFilterLessons() {
+      if (chapterFilter && chapterFilter !== 'all' && chapterFilter !== 'unassigned') {
+        setLoadingFilterLessons(true);
+        const res = await getLessons(chapterFilter);
+        if (isCurrent) {
+          if (res.success && res.data) {
+            setFilterLessons(res.data);
+          } else {
+            setFilterLessons([]);
+          }
+          setLoadingFilterLessons(false);
+        }
+      } else {
+        setFilterLessons([]);
+      }
+      setLessonFilter('all');
+    }
+    loadFilterLessons();
+    return () => {
+      isCurrent = false;
+    };
+  }, [chapterFilter]);
 
   const handleOpenAdd = () => {
     setEditingQuestion(null);
@@ -409,13 +469,46 @@ export default function QuestionsPage() {
     }
   };
 
+  const handleResetFilters = () => {
+    setSubjectFilter('all');
+    setGradeFilter('all');
+    setChapterFilter('all');
+    setLessonFilter('all');
+    setTypeFilter('all');
+    setDifficultyFilter('all');
+    setSearchQuery('');
+  };
+
+  const isFiltered = 
+    subjectFilter !== 'all' || 
+    gradeFilter !== 'all' || 
+    chapterFilter !== 'all' || 
+    lessonFilter !== 'all' || 
+    typeFilter !== 'all' || 
+    difficultyFilter !== 'all' || 
+    searchQuery.trim() !== '';
+
   // Filter Logic
   const filteredQuestions = questions.filter(q => {
     const sMatch = subjectFilter === 'all' || q.subject_id === subjectFilter;
     const gMatch = gradeFilter === 'all' || q.grade === gradeFilter;
+    const cMatch = 
+      chapterFilter === 'all' ? true :
+      chapterFilter === 'unassigned' ? !q.chapter_id :
+      q.chapter_id === chapterFilter;
+    const lMatch = 
+      lessonFilter === 'all' ? true :
+      lessonFilter === 'unassigned' ? !q.lesson_id :
+      q.lesson_id === lessonFilter;
     const tMatch = typeFilter === 'all' || q.question_type === typeFilter;
-    const qMatch = searchQuery === '' || q.content.toLowerCase().includes(searchQuery.toLowerCase()) || (q.explanation && q.explanation.toLowerCase().includes(searchQuery.toLowerCase()));
-    return sMatch && gMatch && tMatch && qMatch;
+    const dMatch = difficultyFilter === 'all' || q.difficulty === difficultyFilter;
+    const qMatch = searchQuery === '' || 
+      q.content.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (q.explanation && q.explanation.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (q.chapters?.title && q.chapters.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (q.lessons?.title && q.lessons.title.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return sMatch && gMatch && cMatch && lMatch && tMatch && dMatch && qMatch;
   });
 
   return (
@@ -478,67 +571,187 @@ export default function QuestionsPage() {
       <div className="card-el p-6 shadow-sm">
         
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-          
-          <div>
-            <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">Môn Học</label>
-            <select
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="all">Tất cả các môn</option>
-              {subjects.map(sub => (
-                <option key={sub.id} value={sub.id}>{sub.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">Khối Lớp</label>
-            <select
-              value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="all">Tất cả khối lớp</option>
-              {gradesList.map((g) => (
-                <option key={g} value={g}>Khối {g}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">Dạng câu hỏi</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="all">Tất cả định dạng</option>
-              <option value="MultipleChoice">Trắc nghiệm (MultipleChoice)</option>
-              <option value="TrueFalse">Đúng / Sai tổ hợp (TrueFalse)</option>
-              <option value="FillIn">Trả lời ngắn (FillIn)</option>
-              <option value="Essay">Tự luận (Essay)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">Tìm kiếm nội dung</label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Search className="w-4 h-4" />
-              </span>
-              <input
-                type="text"
-                placeholder="Nhập nội dung tìm kiếm..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500"
-              />
+        <div className="space-y-4 mb-6">
+          {/* Row 1: Phân loại theo chương trình học (Môn, Khối, Chương, Bài) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Môn Học */}
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                Môn Học
+              </label>
+              <select
+                value={subjectFilter}
+                onChange={(e) => setSubjectFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium"
+              >
+                <option value="all">Tất cả các môn</option>
+                {subjects.map(sub => (
+                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                ))}
+              </select>
             </div>
+
+            {/* Khối Lớp */}
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                Khối Lớp
+              </label>
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium"
+              >
+                <option value="all">Tất cả khối lớp</option>
+                {gradesList.map((g) => (
+                  <option key={g} value={g}>Khối {g}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Chương */}
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Chương</span>
+                {loadingFilterChapters && <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />}
+              </label>
+              <select
+                value={chapterFilter}
+                onChange={(e) => setChapterFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium truncate"
+              >
+                <option value="all">Tất cả chương</option>
+                <option value="unassigned">⚠️ Chưa phân chương</option>
+                {filterChapters.map((chap) => (
+                  <option key={chap.id} value={chap.id}>
+                    {chap.title} {gradeFilter === 'all' ? `(Khối ${chap.grade})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Bài học */}
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Bài học</span>
+                {loadingFilterLessons && <Loader2 className="w-3 h-3 animate-spin text-violet-500" />}
+              </label>
+              <select
+                value={lessonFilter}
+                disabled={chapterFilter === 'all' || chapterFilter === 'unassigned'}
+                onChange={(e) => setLessonFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed truncate"
+                title={chapterFilter === 'all' ? 'Vui lòng chọn chương trước để lọc theo bài' : ''}
+              >
+                <option value="all">
+                  {chapterFilter === 'all' ? '— Chọn chương trước —' : chapterFilter === 'unassigned' ? '— Không áp dụng —' : 'Tất cả bài học'}
+                </option>
+                {chapterFilter !== 'all' && chapterFilter !== 'unassigned' && (
+                  <>
+                    <option value="unassigned">⚠️ Chưa phân bài</option>
+                    {filterLessons.map((les) => (
+                      <option key={les.id} value={les.id}>
+                        {les.title}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+
           </div>
 
+          {/* Row 2: Dạng câu hỏi, độ khó và tìm kiếm */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Dạng câu hỏi */}
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                Dạng câu hỏi
+              </label>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium"
+              >
+                <option value="all">Tất cả định dạng</option>
+                <option value="MultipleChoice">Trắc nghiệm (MultipleChoice)</option>
+                <option value="TrueFalse">Đúng / Sai tổ hợp (TrueFalse)</option>
+                <option value="FillIn">Trả lời ngắn (FillIn)</option>
+                <option value="Essay">Tự luận (Essay)</option>
+              </select>
+            </div>
+
+            {/* Độ khó */}
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                Độ khó
+              </label>
+              <select
+                value={difficultyFilter}
+                onChange={(e) => setDifficultyFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium"
+              >
+                <option value="all">Tất cả độ khó</option>
+                <option value="Easy">Dễ (Nhận biết)</option>
+                <option value="Medium">Trung bình (Thông hiểu)</option>
+                <option value="Hard">Khó (Vận dụng)</option>
+              </select>
+            </div>
+
+            {/* Tìm kiếm nội dung */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                Tìm kiếm nội dung
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Search className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Nhập nội dung câu hỏi, giải thích hoặc tên bài..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-1 focus:ring-indigo-500 font-medium"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
+                    title="Xóa tìm kiếm"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Filter Bar Action & Status */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/60 text-xs">
+            <div className="text-slate-500 font-medium flex items-center gap-2">
+              <span>
+                Tìm thấy <strong className="text-indigo-600 dark:text-indigo-400 font-bold">{filteredQuestions.length}</strong> câu hỏi
+                {questions.length > 0 && ` (trên tổng số ${questions.length} câu trong hệ thống)`}
+              </span>
+              {isFiltered && (
+                <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-800">
+                  Đang lọc dữ liệu
+                </span>
+              )}
+            </div>
+
+            {isFiltered && (
+              <button
+                onClick={handleResetFilters}
+                className="flex items-center gap-1.5 py-1 px-2.5 rounded-md text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Đặt lại bộ lọc
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Questions Table */}

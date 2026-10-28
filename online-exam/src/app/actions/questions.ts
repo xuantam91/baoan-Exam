@@ -19,10 +19,18 @@ export async function getQuestions(
       query = query.eq('grade', grade);
     }
     if (chapterId && chapterId !== 'all') {
-      query = query.eq('chapter_id', chapterId);
+      if (chapterId === 'unassigned') {
+        query = query.is('chapter_id', null);
+      } else {
+        query = query.eq('chapter_id', chapterId);
+      }
     }
     if (lessonId && lessonId !== 'all') {
-      query = query.eq('lesson_id', lessonId);
+      if (lessonId === 'unassigned') {
+        query = query.is('lesson_id', null);
+      } else {
+        query = query.eq('lesson_id', lessonId);
+      }
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
